@@ -50,6 +50,14 @@ _FLATTEN_MAP: dict[str, str] = {
     "model.reasoning_effort": "reasoning_effort",
     "model.rewrite_reasoning_effort": "rewrite_reasoning_effort",
     "model.rewrite_max_completion_tokens": "rewrite_max_completion_tokens",
+    "model.optimizer_max_completion_tokens": "optimizer_max_completion_tokens",
+    "model.openai_compatible_base_url": "openai_compatible_base_url",
+    "model.openai_compatible_api_key": "openai_compatible_api_key",
+    "model.openai_compatible_max_tokens": "openai_compatible_max_tokens",
+    "model.optimizer_openai_compatible_base_url": "optimizer_openai_compatible_base_url",
+    "model.optimizer_openai_compatible_api_key": "optimizer_openai_compatible_api_key",
+    "model.target_openai_compatible_base_url": "target_openai_compatible_base_url",
+    "model.target_openai_compatible_api_key": "target_openai_compatible_api_key",
     "model.codex_exec_path": "codex_exec_path",
     "model.codex_exec_sandbox": "codex_exec_sandbox",
     "model.codex_exec_profile": "codex_exec_profile",
@@ -216,15 +224,23 @@ def _resolve_layer_format_duplicates(cfg: dict) -> None:
     """Prefer canonical structured keys over equivalent flat keys in a layer."""
     for dotted, flat_key in _FLATTEN_MAP.items():
         if _nested_key_present(cfg, dotted):
-            cfg.pop(flat_key, None)
+            # Only remove the flat key when it holds a scalar value, not when
+            # it is the structured section itself (e.g. ``env`` is both the
+            # flat key for ``env.name`` and the section name for the ``env``
+            # dict).  Popping it unconditionally would destroy the section.
+            existing = cfg.get(flat_key)
+            if not isinstance(existing, dict):
+                cfg.pop(flat_key, None)
 
 
 def _drop_base_keys_overridden_by_layer(base: dict, override: dict) -> None:
     """Honor child precedence when inheritance mixes flat and structured YAML."""
     for dotted, flat_key in _FLATTEN_MAP.items():
-        if flat_key in override or _nested_key_present(override, dotted):
+        if _nested_key_present(override, dotted):
             base.pop(flat_key, None)
             _remove_nested_key(base, dotted)
+        elif flat_key in override and not isinstance(override.get(flat_key), dict):
+            base.pop(flat_key, None)
 
 
 # ── YAML loading with _base_ inheritance ─────────────────────────────────

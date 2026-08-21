@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>以 Eval 标注驱动的大批量离线学习自演进</title>
+<style>
+  @page { size: landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: #ffffff; color: #1f2937;
+  }
+  .slide {
+    width: 100vw; height: 100vh; min-height: 720px;
+    display: grid; grid-template-rows: auto 1fr auto;
+    padding: 10px 24px 8px;
+  }
+  /* ---------- Header ---------- */
+  .head { display: flex; align-items: baseline; gap: 14px; border-bottom: 2px solid #2563eb; padding-bottom: 6px; }
+  .head h1 { font-size: 24px; font-weight: 800; color: #0f1e3a; }
+  .head h1 .accent { color: #2563eb; }
+  .head .sub { font-size: 12px; color: #64748b; margin-left: auto; }
+  .head .tag { font-size: 11px; background: #eff6ff; color: #2563eb; padding: 2px 10px; border-radius: 10px; font-weight: 600; border: 1px solid #bfdbfe; }
+
+  .body { display: grid; grid-template-rows: 1.02fr 0.98fr; gap: 8px; padding-top: 7px; overflow: hidden; }
+  .section { display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+  .sec-title { font-size: 13px; font-weight: 700; color: #b45309; display: flex; align-items: center; gap: 8px; }
+  .sec-title .num { background: #b45309; color: #fff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+  .sec-title .hint { font-size: 10px; color: #94a3b8; font-weight: 500; margin-left: auto; }
+
+  .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 12px; }
+  .card h3 { font-size: 12.5px; color: #1d4ed8; margin-bottom: 4px; font-weight: 700; }
+
+  /* ---- 上半:目标 ---- */
+  .goal-inner { display: flex; flex-direction: column; gap: 6px; flex: 1; overflow: hidden; }
+  .vs { display: grid; grid-template-columns: 110px 1fr 1fr; gap: 2px 10px; font-size: 10.5px; line-height: 1.4; align-content: space-evenly; flex: 1; }
+  .vs .vh { font-weight: 700; font-size: 10px; text-transform: uppercase; padding-bottom: 2px; border-bottom: 1px solid #e2e8f0; }
+  .vs .vh.dim { color: #94a3b8; }
+  .vs .vh.bad { color: #dc2626; }
+  .vs .vh.good { color: #047857; }
+  .vs .vl { color: #64748b; font-weight: 700; }
+  .vs .vbad { color: #475569; }
+  .vs .vbad .ic { color: #dc2626; font-weight: 800; margin-right: 3px; }
+  .vs .vbad b { color: #b91c1c; }
+  .vs .vgood { color: #475569; }
+  .vs .vgood .ic { color: #059669; font-weight: 800; margin-right: 3px; }
+  .vs .vgood b { color: #047857; }
+  .goal-strip { background: linear-gradient(90deg, #f0fdf4, #ecfdf5); border: 1px dashed #059669; border-radius: 5px; padding: 4px 10px; font-size: 10.5px; color: #065f46; }
+  .goal-strip b { color: #b45309; }
+
+  /* ---- 下半:三路线 ---- */
+  .route-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; flex: 1; overflow: hidden; }
+  .rcard { border: 1px solid #e2e8f0; border-top: 3px solid; border-radius: 7px; padding: 7px 10px; display: flex; flex-direction: column; gap: 4px; background: #fff; overflow: hidden; }
+  .rcard .rh { display: flex; align-items: baseline; gap: 6px; }
+  .rcard .rname { font-size: 13px; font-weight: 800; }
+  .rcard .rsrc { font-size: 9px; color: #94a3b8; margin-left: auto; }
+  .rcard .rkey { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 9px; align-self: flex-start; }
+  .rcard .rmeta { font-size: 9.8px; color: #475569; line-height: 1.4; }
+  .rcard .rmeta b { color: #0f1e3a; }
+  .rcard .flow { font-family: Consolas, monospace; font-size: 9.5px; line-height: 1.35; color: #334155; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 4px; padding: 4px 6px; }
+  .rcard .flow b { color: #0f766e; }
+  .rcard .feat { font-size: 10px; line-height: 1.45; display: flex; flex-direction: column; gap: 2px; }
+  .rcard .feat .f { display: flex; gap: 4px; }
+  .rcard .feat .fi { flex-shrink: 0; font-weight: 800; }
+  .rcard .num-strip { font-size: 9.5px; color: #92400e; background: #fefce8; border: 1px solid #fde68a; border-radius: 4px; padding: 3px 6px; line-height: 1.35; margin-top: auto; }
+
+  .r1 { border-top-color: #2563eb; } .r1 .rname { color: #1d4ed8; } .r1 .rkey { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; } .r1 .feat .fi { color: #2563eb; }
+  .r2 { border-top-color: #7c3aed; } .r2 .rname { color: #6d28d9; } .r2 .rkey { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; } .r2 .feat .fi { color: #7c3aed; }
+  .r3 { border-top-color: #059669; } .r3 .rname { color: #047857; } .r3 .rkey { background: #f0fdf4; color: #047857; border: 1px solid #a7f3d0; } .r3 .feat .fi { color: #059669; }
+
+  .cmp { display: grid; grid-template-columns: 78px repeat(3, 1fr); gap: 2px 8px; font-size: 9.5px; line-height: 1.4; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 10px; margin-top: 4px; }
+  .cmp .ch { font-weight: 700; color: #94a3b8; font-size: 9px; text-transform: uppercase; }
+  .cmp .cl { color: #64748b; font-weight: 600; }
+  .cmp .cv { color: #334155; }
+  .cmp .c1 { color: #1d4ed8; } .cmp .c2 { color: #6d28d9; } .cmp .c3 { color: #047857; }
+
+  .foot { border-top: 1px solid #e2e8f0; padding-top: 5px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; }
+  .foot .key { color: #b45309; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ============ HEADER ============ -->
+  <div class="head">
+    <h1>以 Eval 标注驱动的<span class="accent">大批量离线学习自演进</span></h1>
+    <span class="tag">技术路线全景</span>
+    <span class="sub">强监督信号 · 可复现训练 · 留出集守门 · 产物是一段可读文本</span>
+  </div>
+
+  <div class="body">
+
+    <!-- ========== 上半:为什么需要它 ========== -->
+    <div class="section">
+      <div class="sec-title"><span class="num">A</span>整体目标:少批量交互演进<b style="color:#dc2626;">&nbsp;做不到&nbsp;</b>的六件事,只有大批量 Eval 离线学习能做到<span class="hint">论证方式:不谈通用痛点,只谈能力边界差异</span></div>
+      <div class="goal-inner">
+        <div class="card" style="display:flex;flex-direction:column;padding-top:5px;">
+          <div class="vs">
+            <div class="vh dim">关键能力</div>
+            <div class="vh bad">✗ 少批量交互数据演进的边界</div>
+            <div class="vh good">✓ 大批量 Eval 标注演进的解法</div>
+
+            <div class="vl">① 正确性判定</div>
+            <div class="vbad"><span class="ic">✗</span>无 ground truth,只能靠 <b>LLM-as-judge</b> 或用户是否追问来猜对错,judge 噪声与真实错误无法分离</div>
+            <div class="vgood"><span class="ic">✓</span>标注即<b>裁判</b>:精确匹配 / 单元格比对 / 代码执行,信号无歧义,优化方向唯一</div>
+
+            <div class="vl">② 提升可证伪</div>
+            <div class="vbad"><span class="ic">✗</span>样本量在<b>个位数到几十</b>,±1–2 pt 的run-to-run 噪声就能淹没真实效果,「变好了」无法证伪</div>
+            <div class="vgood"><span class="ic">✓</span>train/val/test 三切分 + 千级样本(SearchQA 1400 / SpreadsheetBench 280),提升<b>统计显著</b></div>
+
+            <div class="vl">③ 覆盖完备性</div>
+            <div class="vbad"><span class="ic">✗</span>只见到用户<b>实际问过</b>的任务,分布高度偏斜;没触发过的失败模式永远学不到</div>
+            <div class="vgood"><span class="ic">✓</span>benchmark <b>系统性铺满</b>任务空间,主动暴露未被触发的短板,建立<b>能力基线</b></div>
+
+            <div class="vl">④ 防过拟合</div>
+            <div class="vbad"><span class="ic">✗</span>少量样本 + 弱信号,极易把<b>个人偏好或偶发错误</b>固化进技能,污染通用能力</div>
+            <div class="vgood"><span class="ic">✓</span>留出集<b>严格单调门控</b>:打平即拒、坏编辑回滚,泛化性由未见过的数据裁决</div>
+
+            <div class="vl">⑤ 可复现 / 可调参</div>
+            <div class="vbad"><span class="ic">✗</span>数据随用户行为漂移,<b>无法重跑</b>,超参搜索、消融实验、方案 A/B 都做不了</div>
+            <div class="vgood"><span class="ic">✓</span>数据集固定 + 随机种子固定 → 可网格搜 LR × 调度器,可做<b>消融与横向对比</b></div>
+
+            <div class="vl">⑥ 冷启动能力</div>
+            <div class="vbad"><span class="ic">✗</span>依赖<b>已有交互历史</b>,新场景 / 新用户零样本时无从演进,天生只能做增量微调</div>
+            <div class="vgood"><span class="ic">✓</span>可从<b>空白技能</b>从零训出可交付资产,并跨模型 / 跨 Harness / 跨相邻任务迁移复用</div>
+          </div>
+          <div class="goal-strip">
+            <b>结论:</b>少批量交互演进负责「<b>长尾个性化</b>」——它无法建立、也无法证明<b>能力基线</b>;大批量 Eval 离线学习是唯一能产出<b>可验证、可复现、可迁移</b>基线技能的路径。二者是 <b>预训练 → 微调</b>,不是二选一。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 下半:三条技术路线 ========== -->
+    <div class="section">
+      <div class="sec-title"><span class="num">B</span>三条特色技术路线 — 同一目标下的三种「优化器」思路<span class="hint">差异核心:如何把 Eval 分数变成对文本的改动</span></div>
+      <div class="route-row">
+
+        <!-- 路线1: SkillOpt -->
+        <div class="rcard r1">
+          <div class="rh"><span class="rname">SkillOpt</span><span class="rsrc">Microsoft · arXiv 2605.23904</span></div>
+          <div class="rkey">思路一:深度学习同构 — 技能即权重</div>
+          <div class="rmeta">把 Markdown 技能文档当作<b>可训练参数</b>,完整照搬 DL 训练纪律:epoch / minibatch / 学习率 / 调度器 / 动量 / 验证门控。</div>
+          <div class="flow">Rollout → Reflect → Aggregate<br>→ Select(<b>LR 裁剪</b>) → Update → <b>Gate</b><br>Epoch 边界:慢更新(动量) + 元技能</div>
+          <div class="feat">
+            <div class="f"><span class="fi">▪</span><span>轨迹反思产出 <b>add/del/replace 有界编辑</b>,等价于「文本梯度」</span></div>
+            <div class="f"><span class="fi">▪</span><span><b>学习率</b>限制每步最多改几条 → 防止过冲震荡</span></div>
+            <div class="f"><span class="fi">▪</span><span>被拒编辑进<b>缓冲区</b>下轮复用,慢更新对抗跨轮遗忘</span></div>
+          </div>
+          <div class="num-strip"><b>成绩</b>:6 benchmark × 7 模型 × 3 harness = 52 格全部 best/tied-best;GPT-5.5 直聊 <b>+23.5</b> 分、Codex <b>+24.8</b>、Claude Code <b>+19.1</b>。产物仅 300–2000 token。</div>
+        </div>
+
+        <!-- 路线2: GEPA -->
+        <div class="rcard r2">
+          <div class="rh"><span class="rname">GEPA</span><span class="rsrc">UC Berkeley/Stanford · ICLR 2026 Oral</span></div>
+          <div class="rkey">思路二:反思式进化 — Pareto 前沿种群搜索</div>
+          <div class="rmeta">不维护单一最优,而是维护一个<b>候选种群</b>;评测函数除分数外还回传<b>自然语言反馈</b>(报错、编译输出、约束违规)供反思。</div>
+          <div class="flow">Pareto 前沿<b>选亲代</b> → minibatch 带轨迹评测<br>→ 自然语言<b>反思变异</b> → 前沿更新<br>→ 跨候选<b>合并互补经验</b>(交叉)</div>
+          <div class="feat">
+            <div class="f"><span class="fi">▪</span><span><b>Pareto 选择</b>:在任一样本上最强即存活 → 防早熟收敛</span></div>
+            <div class="f"><span class="fi">▪</span><span>变异<b>继承祖先经验</b>,少量 rollout 也有大增益</span></div>
+            <div class="f"><span class="fi">▪</span><span>可作<b>推理期搜索</b>用于代码优化、ARC 推理</span></div>
+          </div>
+          <div class="num-strip"><b>成绩</b>:较 GRPO 平均 <b>+10%</b>(最高 +20%)而 rollout 少至 <b>1/35</b>;较 MIPROv2 高 <b>10%+</b> 且 prompt 短至 <b>1/9.2</b>。</div>
+        </div>
+
+        <!-- 路线3: SIMBA -->
+        <div class="rcard r3">
+          <div class="rh"><span class="rname">SIMBA / DSPy</span><span class="rsrc">Stanford NLP · dspy.SIMBA · 2025–2026</span></div>
+          <div class="rkey">思路三:随机内省小批量上升 — 瞄准高方差难例的自反思</div>
+          <div class="rmeta">GEPA 的前身。采样小批量后按<b>输出方差</b>给样本分桶排序,专攻模型"时对时错"的<b>难例</b>;让 LLM 对比好坏轨迹自反思,产出具体改进<b>规则</b>或添加成功 <b>demo</b>。</div>
+          <div class="flow"><b>Minibatch</b> 采样 → 多温度跑轨迹<br>→ 按<b>方差分桶</b>:高方差=难例优先<br>→ <b>append_a_rule</b>:对比好坏轨迹→规则<br>或 <b>append_a_demo</b>:加成功示例</div>
+          <div class="feat">
+            <div class="f"><span class="fi">▪</span><span><b>多臂老虎机选择</b>:softmax 采样候选,平衡利用/探索</span></div>
+            <div class="f"><span class="fi">▪</span><span><b>方差驱动的难例聚焦</b>:不均匀分配注意力给硬样本</span></div>
+            <div class="f"><span class="fi">▪</span><span><b>双策略</b>:规则(泛化)或 demo(具体),按需选择</span></div>
+          </div>
+          <div class="num-strip"><b>特点</b>:比 MIPROv2 更<b>样本高效</b>、更稳定;需较强 LLM(3B 以下可能不如简单优化器)。是 GEPA 的直接前身,GEPA 在其基础上加了 Pareto 前沿 + NL 反馈。</div>
+        </div>
+      </div>
+
+      <!-- 对比条 -->
+      <div class="cmp">
+        <div class="ch">对比维度</div><div class="ch c1">SkillOpt</div><div class="ch c2">GEPA</div><div class="ch c3">SIMBA</div>
+        <div class="cl">优化机制</div><div class="cv">梯度下降类比(单点迭代)</div><div class="cv">进化搜索(种群 + Pareto 前沿)</div><div class="cv">老虎机选择 + 难例聚焦自反思</div>
+        <div class="cl">利用信号</div><div class="cv">轨迹反思 → 有界编辑</div><div class="cv">分数 + 自然语言反馈</div><div class="cv">好坏轨迹对比 → 规则 / demo</div>
+        <div class="cl">优化对象</div><div class="cv">单份技能文档(部署即交付)</div><div class="cv">系统内各模块 prompt</div><div class="cv">指令规则 + few-shot 示例</div>
+        <div class="cl">稳定性来源</div><div class="cv">LR 裁剪 + 门控 + 慢更新</div><div class="cv">Pareto 前沿保多样性</div><div class="cv">softmax 探索 + 全集终选</div>
+        <div class="cl">适用场景</div><div class="cv">Agent 技能长期演进与迁移</div><div class="cv">rollout 昂贵、反馈富文本</div><div class="cv">难例集中、需样本高效</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>共性骨架:<span class="key">大批量标注 Eval → 执行采样 → 从失败中提炼 → 改写文本 → 留出集验证接受</span></span>
+    <span>三者均<span class="key">不更新模型权重</span>,可与「少批量交互数据演进」构成 预训练 + 微调 两阶段</span>
+  </div>
+</div>
+</body>
+</html>

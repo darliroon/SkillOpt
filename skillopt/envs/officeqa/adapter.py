@@ -25,7 +25,7 @@ class OfficeQAAdapter(EnvAdapter):
         seed: int = 42,
         limit: int = 0,
         max_tool_turns: int = 12,
-        max_completion_tokens: int = 16384,
+        max_completion_tokens: int = 0,
         search_mode: str = "offline",
         max_queries_per_turn: int = 4,
         search_api_url: str = os.environ.get("OFFICEQA_SEARCH_API_URL", "http://localhost:8080/search_tool/search"),

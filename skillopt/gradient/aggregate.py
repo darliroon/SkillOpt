@@ -32,6 +32,7 @@ def _merge_batch(
     update_mode: str,
     meta_skill_context: str = "",
     level: int = 1,
+    max_completion_tokens: int = 0,
 ) -> dict:
     """Call optimizer LLM to merge a batch of patches into one."""
     patches_text = json.dumps(patches, ensure_ascii=False, indent=2)
@@ -46,7 +47,7 @@ def _merge_batch(
         response, _ = chat_optimizer(
             system=system_prompt,
             user=user,
-            max_completion_tokens=64000 if is_full_rewrite_minibatch_mode(update_mode) else 16384,
+            max_completion_tokens=max_completion_tokens,
             retries=3,
             stage="merge",
         )
@@ -86,6 +87,7 @@ def _hierarchical_merge(
     label: str = "",
     workers: int = 16,
     meta_skill_context: str = "",
+    max_completion_tokens: int = 0,
 ) -> dict:
     """Hierarchically merge N patches using the given system prompt.
 
@@ -130,7 +132,7 @@ def _hierarchical_merge(
                 futs = {
                     ex.submit(
                         _merge_batch, skill_content, batch, system_prompt, update_mode,
-                        meta_skill_context, level,
+                        meta_skill_context, level, max_completion_tokens,
                     ): idx
                     for idx, batch in to_merge
                 }
@@ -162,6 +164,7 @@ def merge_patches(
     workers: int = 16,
     update_mode: str = "patch",
     meta_skill_context: str = "",
+    max_completion_tokens: int = 0,
 ) -> dict:
     """Failure-first hierarchical merge with support count tracking.
 
@@ -196,12 +199,14 @@ def merge_patches(
         skill_content, failure_patches, merge_failure_prompt, update_mode,
         batch_size, verbose, label="failure", workers=workers,
         meta_skill_context=meta_skill_context,
+        max_completion_tokens=max_completion_tokens,
     )
 
     success_merged = _hierarchical_merge(
         skill_content, success_patches, merge_success_prompt, update_mode,
         batch_size, verbose, label="success", workers=workers,
         meta_skill_context=meta_skill_context,
+        max_completion_tokens=max_completion_tokens,
     )
 
     f_edits = get_payload_items(failure_merged, update_mode)
@@ -244,7 +249,7 @@ def merge_patches(
         response, _ = chat_optimizer(
             system=merge_final_prompt,
             user=user,
-            max_completion_tokens=64000 if is_full_rewrite_minibatch_mode(update_mode) else 16384,
+            max_completion_tokens=max_completion_tokens,
             retries=3,
             stage="merge",
         )

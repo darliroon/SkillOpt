@@ -38,6 +38,7 @@ def decide_autonomous_learning_rate(
     rollout_n: int,
     step_buffer_context: str = "",
     meta_skill_context: str = "",
+    max_completion_tokens: int = 0,
 ) -> dict:
     """Ask the optimizer to choose the number of update items for this step.
 
@@ -76,7 +77,7 @@ def decide_autonomous_learning_rate(
         response, _ = chat_optimizer(
             system=load_prompt("lr_autonomous"),
             user=user,
-            max_completion_tokens=16384,
+            max_completion_tokens=max_completion_tokens,
             retries=3,
             stage="lr_autonomous",
         )

@@ -41,10 +41,6 @@ from skillopt.model.common import (
 
 BACKEND_NAME = "openai_compatible"
 
-# A neutral, widely-available default. Real deployments should set the model
-# explicitly (e.g. "deepseek-chat", "llama-3.3-70b-versatile", "qwen2.5:7b").
-_DEFAULT_BASE_URL = "https://api.openai.com/v1"
-
 
 @dataclass
 class OpenAICompatibleConfig:
@@ -81,16 +77,16 @@ def _initial_config(role: str) -> OpenAICompatibleConfig:
     role_upper = role.upper()
     deployment_env = "OPTIMIZER_DEPLOYMENT" if role == "optimizer" else "TARGET_DEPLOYMENT"
     return OpenAICompatibleConfig(
-        base_url=_role_env(role, "BASE_URL", _DEFAULT_BASE_URL),
+        base_url=_role_env(role, "BASE_URL", ""),
         api_key=_role_env(role, "API_KEY", ""),
         deployment=(
             os.environ.get(f"{role_upper}_OPENAI_COMPATIBLE_MODEL")
             or os.environ.get("OPENAI_COMPATIBLE_MODEL")
             or os.environ.get(deployment_env)
-            or default_model_for_backend(BACKEND_NAME)
+            or "GLM-5.2"
         ),
         timeout_seconds=float(_role_env(role, "TIMEOUT_SECONDS", "300") or 300),
-        max_tokens=_parse_int(_role_env(role, "MAX_TOKENS", "8000"), 8000),
+        max_tokens=_parse_int(_role_env(role, "MAX_TOKENS", "0"), 0),
         temperature=_parse_optional_float(_role_env(role, "TEMPERATURE", "")),
     )
 
@@ -111,8 +107,14 @@ def _config_for(role: str) -> OpenAICompatibleConfig:
 
 
 def _build_client(config: OpenAICompatibleConfig) -> OpenAI:
+    base_url = config.base_url.rstrip("/")
+    if not base_url:
+        raise ValueError(
+            "OpenAI-compatible base_url is not configured — "
+            "set openai_compatible_base_url (or optimizer/target-specific) in config"
+        )
     return OpenAI(
-        base_url=config.base_url.rstrip("/") or _DEFAULT_BASE_URL,
+        base_url=base_url,
         # Some OpenAI-compatible servers (Ollama, vLLM, local proxies) do not
         # require an API key. The SDK still expects a non-empty string, so fall
         # back to a harmless placeholder when none is configured.
@@ -178,12 +180,12 @@ def _chat_messages_impl(
 ) -> tuple[Any, dict[str, int]]:
     config = _config_for(role)
     client = _get_client(role)
+    if max_completion_tokens <= 0:
+        raise ValueError("max_completion_tokens must be set (> 0) — check your config")
     kwargs: dict[str, Any] = {
         "model": deployment or config.deployment,
         "messages": messages,
-        # ``max_tokens`` (rather than ``max_completion_tokens``) is the field
-        # understood by the broadest set of OpenAI-compatible providers.
-        "max_tokens": min(max_completion_tokens, config.max_tokens),
+        "max_tokens": max_completion_tokens,
     }
     if config.temperature is not None:
         kwargs["temperature"] = config.temperature
@@ -205,6 +207,13 @@ def _chat_messages_impl(
                 )
             message = choices[0].message
             text = message.content or ""
+            # Reasoning models (e.g. GLM-5.2) may put all output in
+            # reasoning_content when max_tokens is tight, leaving
+            # content empty.  Fall back to reasoning_content so the
+            # analyst/optimizer pipeline can still extract patches.
+            reasoning = getattr(message, "reasoning_content", None) or ""
+            if not text and reasoning:
+                text = reasoning
             usage_info = usage_from_openai_usage(getattr(resp, "usage", None))
             tracker.record(
                 stage,
@@ -228,7 +237,7 @@ def _chat_messages_impl(
 def chat_optimizer(
     system: str,
     user: str,
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     retries: int = 5,
     stage: str = "optimizer",
     reasoning_effort: str | None = None,
@@ -252,7 +261,7 @@ def chat_optimizer(
 def chat_target(
     system: str,
     user: str,
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     retries: int = 5,
     stage: str = "target",
     reasoning_effort: str | None = None,
@@ -275,7 +284,7 @@ def chat_target(
 
 def chat_optimizer_messages(
     messages: list[dict[str, Any]],
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     retries: int = 5,
     stage: str = "optimizer",
     reasoning_effort: str | None = None,
@@ -301,7 +310,7 @@ def chat_optimizer_messages(
 
 def chat_target_messages(
     messages: list[dict[str, Any]],
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     retries: int = 5,
     stage: str = "target",
     reasoning_effort: str | None = None,

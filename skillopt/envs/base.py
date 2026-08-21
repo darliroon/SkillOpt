@@ -269,6 +269,10 @@ class EnvAdapter(ABC):
             step_buffer_context=kwargs.get("step_buffer_context", ""),
             meta_skill_context=kwargs.get("meta_skill_context", ""),
             update_mode=getattr(self, "_cfg", {}).get("skill_update_mode", "patch"),
+            max_completion_tokens=kwargs.get(
+                "max_completion_tokens",
+                getattr(self, "_rewrite_max_completion_tokens", 0),
+            ),
         )
 
     @abstractmethod

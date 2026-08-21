@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Skill/Prompt 自演进实现方案 — A全量适配 × C增量演进 闭环</title>
+<style>
+  @page { size: landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: #f8fafc; color: #1f2937;
+  }
+  .slide {
+    width: 100vw; height: 100vh; min-height: 720px;
+    display: grid; grid-template-rows: auto 1fr auto;
+    padding: 8px 18px 6px;
+  }
+
+  /* Header */
+  .head { display: flex; align-items: baseline; gap: 14px; border-bottom: 2.5px solid #0f1e3a; padding-bottom: 5px; }
+  .head h1 { font-size: 19px; font-weight: 800; color: #0f1e3a; }
+  .head h1 .accent { color: #7c3aed; }
+  .head h1 .arrow { color: #94a3b8; font-weight: 600; font-size: 17px; }
+  .head .tag { font-size: 10.5px; background: #faf5ff; color: #7c3aed; padding: 2px 10px; border-radius: 10px; font-weight: 600; border: 1px solid #ddd6fe; }
+  .head .sub { font-size: 11px; color: #64748b; margin-left: auto; }
+  .head .sub b { color: #0f1e3a; }
+
+  /* Body */
+  .body { padding-top: 6px; overflow: hidden; display: flex; flex-direction: column; gap: 5px; }
+
+  /* 顶层: 度量定义 */
+  .measure {
+    border: 1.5px solid #475569; border-radius: 8px; padding: 5px 10px;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .measure .m-label { font-size: 10px; font-weight: 800; color: #334155; white-space: nowrap; }
+  .measure .m-items { display: flex; gap: 6px; flex: 1; }
+  .m-item { background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; flex: 1; text-align: center; }
+  .m-item .mi-t { font-size: 9px; font-weight: 800; color: #334155; }
+  .m-item .mi-d { font-size: 7.8px; color: #64748b; line-height: 1.3; margin-top: 1px; }
+  .measure .m-arrow { font-size: 14px; color: #94a3b8; font-weight: 800; }
+
+  /* 主区: A → 生产 → C 串联 */
+  .main { flex: 1; display: grid; grid-template-columns: 1fr 56px 1fr; gap: 0; overflow: hidden; }
+
+  /* A 全量适配 */
+  .phase {
+    border-radius: 8px; border: 1.5px solid; padding: 6px 10px;
+    display: flex; flex-direction: column; gap: 4px; overflow: hidden;
+  }
+  .phase-a { border-color: #2563eb; background: linear-gradient(160deg, #eff6ff, #f0f9ff); }
+  .phase-c { border-color: #b45309; background: linear-gradient(160deg, #fffdf7, #fffbeb); }
+
+  .ph-head { display: flex; align-items: center; gap: 6px; padding-bottom: 4px; border-bottom: 1.5px solid; }
+  .ph-head .ph-num { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #fff; flex-shrink: 0; }
+  .ph-head .ph-title { font-size: 12px; font-weight: 800; }
+  .ph-head .ph-sub { font-size: 8.5px; font-weight: 600; opacity: 0.7; margin-left: auto; font-style: italic; }
+  .phase-a .ph-head { border-color: #bfdbfe; } .phase-a .ph-num { background: #2563eb; } .phase-a .ph-title { color: #1e40af; }
+  .phase-c .ph-head { border-color: #fde68a; } .phase-c .ph-num { background: #b45309; } .phase-c .ph-title { color: #92400e; }
+
+  /* 场景卡 */
+  .scene { font-size: 8.5px; line-height: 1.35; padding: 4px 7px; border-radius: 5px; }
+  .phase-a .scene { background: #dbeafe; color: #1e3a5f; }
+  .phase-c .scene { background: #fef3c7; color: #78350f; }
+  .scene b { font-weight: 800; }
+
+  /* 步骤流程 */
+  .steps { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  .step { background: rgba(255,255,255,0.9); border: 1px solid; border-radius: 5px; padding: 4px 8px; display: flex; align-items: flex-start; gap: 6px; }
+  .step .s-n { width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: #fff; flex-shrink: 0; margin-top: 1px; }
+  .step .s-body { flex: 1; }
+  .step .s-t { font-size: 9px; font-weight: 800; }
+  .step .s-d { font-size: 7.5px; line-height: 1.35; color: #475569; margin-top: 2px; }
+  .step .s-tag { font-size: 7px; font-weight: 700; opacity: 0.6; margin-left: 4px; font-style: italic; }
+  .step .s-code { font-size: 7px; background: #f1f5f9; border-radius: 3px; padding: 1px 4px; color: #334155; margin-top: 2px; display: inline-block; font-family: monospace; }
+
+  .phase-a .step { border-color: #bfdbfe; } .phase-a .step .s-n { background: #2563eb; } .phase-a .step .s-t { color: #1e40af; }
+  .phase-c .step { border-color: #fde68a; } .phase-c .step .s-n { background: #b45309; } .phase-c .step .s-t { color: #92400e; }
+
+  /* 结果数据条 */
+  .result { border-radius: 6px; padding: 5px 8px; display: flex; gap: 4px; margin-top: 2px; }
+  .phase-a .result { background: #dbeafe; border: 1.5px dashed #2563eb; }
+  .phase-c .result { background: #fef3c7; border: 1.5px dashed #b45309; }
+  .r-item { flex: 1; text-align: center; }
+  .r-item .rv { font-size: 13px; font-weight: 800; }
+  .r-item .rk { font-size: 7px; color: #475569; line-height: 1.2; }
+  .phase-a .rv { color: #1e40af; } .phase-c .rv { color: #92400e; }
+
+  /* 中间衔接桥 */
+  .bridge {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; padding: 0 2px;
+  }
+  .bridge .b-arrow {
+    font-size: 22px; font-weight: 800; color: #64748b;
+  }
+  .bridge .b-label {
+    font-size: 8.5px; font-weight: 800; color: #475569; text-align: center;
+    background: #fff; border: 1.5px solid #cbd5e1; border-radius: 7px; padding: 5px 8px; line-height: 1.4;
+  }
+  .bridge .b-label b { color: #0f1e3a; }
+  .bridge .b-produce {
+    font-size: 8px; font-weight: 700; color: #059669; text-align: center;
+    background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 4px 7px; line-height: 1.35;
+  }
+
+  /* 闭环回流条 */
+  .loop-bar {
+    background: linear-gradient(90deg, #eff6ff, #ecfdf5, #fffbeb, #eff6ff);
+    border: 1.5px dashed #2563eb; border-radius: 8px;
+    padding: 5px 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .loop-label { font-size: 10px; font-weight: 800; color: #0f1e3a; white-space: nowrap; }
+  .loop-chain { display: flex; align-items: center; gap: 4px; flex: 1; justify-content: center; }
+  .loop-step { font-size: 8.5px; font-weight: 700; padding: 3px 10px; border-radius: 6px; white-space: nowrap; }
+  .ls-a { background: #dbeafe; color: #1e40af; border: 1px solid #2563eb; }
+  .ls-prod { background: #ecfdf5; color: #047857; border: 1px solid #059669; }
+  .ls-c { background: #fef3c7; color: #92400e; border: 1px solid #b45309; }
+  .loop-arr { color: #64748b; font-size: 12px; font-weight: 800; }
+  .loop-tag { font-size: 10px; font-weight: 800; color: #059669; white-space: nowrap; }
+  .loop-note { font-size: 8px; color: #64748b; white-space: nowrap; }
+
+  /* 下游服务 */
+  .downstream {
+    border: 1.5px solid #059669; border-radius: 8px; padding: 5px 10px;
+    background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ds-label { font-size: 10px; font-weight: 800; color: #047857; white-space: nowrap; }
+  .ds-items { display: flex; gap: 6px; flex: 1; }
+  .ds-item { background: #fff; border: 1px solid #a7f3d0; border-radius: 6px; padding: 4px 8px; flex: 1; text-align: center; }
+  .ds-item .di-t { font-size: 9px; font-weight: 800; color: #047857; }
+  .ds-item .di-d { font-size: 7.5px; color: #475569; line-height: 1.25; margin-top: 1px; }
+
+  /* Footer */
+  .foot { border-top: 1px solid #e2e8f0; padding-top: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 9px; }
+  .foot .left { color: #64748b; }
+  .foot .left b { color: #0f1e3a; }
+  .foot .src { font-size: 8px; color: #94a3b8; }
+  .foot .src a { color: #6366f1; }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ============ HEADER ============ -->
+  <div class="head">
+    <h1>Skill/Prompt 自演进 <span class="arrow">|</span> <span class="accent">A全量适配 × C增量演进 闭环方案</span></h1>
+    <span class="tag">DSPy统一驱动 · GEPA富反馈 + 指令库增量组装</span>
+    <span class="sub">参考: <b>Dropbox Dash Engineering Blog</b> (2026.03)</span>
+  </div>
+
+  <div class="body">
+
+    <!-- ====== 顶层: 度量定义 ====== -->
+    <div class="measure">
+      <span class="m-label">度量层 · 定义"什么是好"</span>
+      <div class="m-items">
+        <div class="m-item">
+          <div class="mi-t">人工金标准集</div>
+          <div class="mi-d">小规模(查询,文档,1-5分,人类解释)<br>非敏感内部数据·唯一Ground Truth锚</div>
+        </div>
+        <div class="m-item">
+          <div class="mi-t">NMSE 主指标</div>
+          <div class="mi-d">归一化均方误差:裁判分 vs 人类分<br>0=完美一致·越小越好</div>
+        </div>
+        <div class="m-item">
+          <div class="mi-t">双目标优化函数</div>
+          <div class="mi-d">最小化NMSE + 保证输出始终可用<br>= DSPy 优化目标</div>
+        </div>
+        <div class="m-item">
+          <div class="mi-t">留出集同条件PK</div>
+          <div class="mi-d">优化Prompt vs 原手写Prompt<br>在相同任务/数据/指标下直接对比</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== 主区: A → 生产桥 → C ====== -->
+    <div class="main">
+
+      <!-- ========== Phase A: 全量适配 ========== -->
+      <div class="phase phase-a">
+        <div class="ph-head">
+          <span class="ph-num">A</span>
+          <span class="ph-title">全量适配 — 冷启动 / 换新模型时用</span>
+          <span class="ph-sub">DSPy + GEPA 富反馈反思循环</span>
+        </div>
+        <div class="scene">
+          <b>场景:</b> 需从贵模型迁移到便宜模型(如o3→gpt-oss-120b), 手写Prompt直接搬过来质量掉, 人工调1-2周还追不回 → 需全量重写适配
+        </div>
+        <div class="steps">
+          <div class="step">
+            <span class="s-n">1</span>
+            <div class="s-body">
+              <span class="s-t">GEPA 富反馈生成<span class="s-tag">核心机制</span></span>
+              <div class="s-d">每条"人机评分分歧"生成结构化文本反馈:<b>不再是标量分数</b>, 而是"分差大小+方向+人类解释+模型推理"四维组合</div>
+              <div class="s-code">diff = predicted - expected; + human rationale; + model reasoning</div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">2</span>
+            <div class="s-body">
+              <span class="s-t">DSPy 反思循环迭代<span class="s-tag">优化循环</span></span>
+              <div class="s-d">评估→暴露失败模式(自然语言)→Prompt修订→重评→直接优化NMSE → 系统能回应具体模式(如"低估时效性""过度关键词匹配")</div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">3</span>
+            <div class="s-body">
+              <span class="s-t">反过拟合护栏<span class="s-tag">工程保障</span></span>
+              <div class="s-d">禁止拷贝训练集关键词/用户名/文档原文到Prompt(防"背例") · 禁止改任务参数(评分范围/格式定义) · 强制加"通用规则"而非"具体例子"</div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">4</span>
+            <div class="s-body">
+              <span class="s-t">留出集门控验收<span class="s-tag">上线门槛</span></span>
+              <div class="s-d">优化Prompt vs 手写Prompt在留出集上同条件PK → NMSE严格优于基线才接受 → 产出初始优化Prompt <b>进入生产</b></div>
+            </div>
+          </div>
+        </div>
+        <div class="result">
+          <div class="r-item"><div class="rv">-45%</div><div class="rk">NMSE<br>8.83→4.86</div></div>
+          <div class="r-item"><div class="rv">周→天</div><div class="rk">适配周期<br>1-2周→1-2天</div></div>
+          <div class="r-item"><div class="rv">10-100x</div><div class="rk">同成本<br>标注量扩大</div></div>
+        </div>
+      </div>
+
+      <!-- ========== 中间衔接桥 ========== -->
+      <div class="bridge">
+        <div class="b-arrow">⇨</div>
+        <div class="b-label">
+          <b>产出初始优化Prompt</b><br>
+          进入生产环境<br>
+          服务三条流水线
+        </div>
+        <div class="b-produce">
+          线上运行中<br>
+          持续产生新分歧案例<br>
+          (裁判vs人类)
+        </div>
+        <div class="b-arrow">⇦</div>
+      </div>
+
+      <!-- ========== Phase C: 增量演进 ========== -->
+      <div class="phase phase-c">
+        <div class="ph-head">
+          <span class="ph-num">C</span>
+          <span class="ph-title">增量演进 — 生产裁判安全持续微调</span>
+          <span class="ph-sub">指令库 bullet + DSPy 选择组装</span>
+        </div>
+        <div class="scene">
+          <b>场景:</b> 生产裁判已强且多条流水线依赖, 大改风险高(改一词corner case就变) → 不重写整段Prompt, 只做"小PR+测试"式安全增量
+        </div>
+        <div class="steps">
+          <div class="step">
+            <span class="s-n">1</span>
+            <div class="s-body">
+              <span class="s-t">线上分歧案例涌现<span class="s-tag">信号来源</span></span>
+              <div class="s-d">A产出的裁判线上执行 → 遇到新边界case(如文档时效/模糊匹配) → 裁判打分与人类评分出现显著分歧 → <b>记录该(查询,文档)对</b></div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">2</span>
+            <div class="s-body">
+              <span class="s-t">人类写解释 → 蒸馏单行bullet<span class="s-tag">知识沉淀</span></span>
+              <div class="s-d">人类写"该文档超一年应降分" → 压缩为单行规则存入<b>指令库</b></div>
+              <div class="s-code">"Documents older than a year should be rated at least one point lower..."</div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">3</span>
+            <div class="s-body">
+              <span class="s-t">DSPy 选择+组装(非重写)<span class="s-tag">核心机制</span></span>
+              <div class="s-d">DSPy不重写Prompt主体 → 只从指令库中<b>选哪几条bullet加进Prompt末尾、怎么组合</b> → 在验证集上测是否提分且不引入副作用 → 通过才加</div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">4</span>
+            <div class="s-body">
+              <span class="s-t">"小PR+测试"增量上线<span class="s-tag">安全保障</span></span>
+              <div class="s-d">每条bullet附触发它的分歧案例做验证 → 增量改/回归可诊断/基线行为稳定 → <b>不回退已有能力</b>的同时持续推高对齐</div>
+            </div>
+          </div>
+        </div>
+        <div class="result">
+          <div class="r-item"><div class="rv">持续↑</div><div class="rk">裁判与人类<br>对齐累积提升</div></div>
+          <div class="r-item"><div class="rv">不回退</div><div class="rk">已有行为<br>基线稳定</div></div>
+          <div class="r-item"><div class="rv">可追溯</div><div class="rk">每条规则有<br>分歧案例出处</div></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ====== 下游服务 ====== -->
+    <div class="downstream">
+      <span class="ds-label">裁判服务 ↓</span>
+      <div class="ds-items">
+        <div class="ds-item"><div class="di-t">排序流水线</div><div class="di-d">在线: 搜索结果按裁判打分排序展示 [低时延]</div></div>
+        <div class="ds-item"><div class="di-t">训练数据生成</div><div class="di-d">离线: 裁判批量打标10-100x → 喂排序模型训练 [高吞吐]</div></div>
+        <div class="ds-item"><div class="di-t">离线评测流水线</div><div class="di-d">离线: 裁判打分做版本验收/回归检测 [一致性]</div></div>
+      </div>
+      <span class="ds-label">↑ 分歧回流</span>
+    </div>
+
+    <!-- ====== 闭环回流条 ====== -->
+    <div class="loop-bar">
+      <span class="loop-label">越用越好闭环:</span>
+      <div class="loop-chain">
+        <span class="loop-step ls-a">A: GEPA全量适配产出初始优化Prompt</span>
+        <span class="loop-arr">→</span>
+        <span class="loop-step ls-prod">生产裁判上线服务三条流水线</span>
+        <span class="loop-arr">→</span>
+        <span class="loop-step ls-c">C: 线上分歧案例→人类解释→蒸馏bullet→DSPy选组装→增量上线</span>
+        <span class="loop-arr">→</span>
+        <span class="loop-step ls-prod">裁判进化后继续服务→新分歧继续涌现</span>
+        <span class="loop-arr">→</span>
+        <span class="loop-tag">↻ 持续增益</span>
+      </div>
+      <span class="loop-note">大场景变化时(如换模型)回到A全量重适配</span>
+    </div>
+
+  </div>
+
+  <!-- ============ Footer ============ -->
+  <div class="foot">
+    <span class="left"><b>一句话:</b> A用GEPA富反馈全量适配产出初始优化Prompt→部署生产→C持续采分歧案例蒸馏bullet规则DSPy选组装增量微调——A治"从差到好"的大步快跑,C治"从好到更好"的安全增量,两者串联构成"越用越好"闭环</span>
+    <span class="src">来源: <a href="https://dropbox.tech/machine-learning/optimizing-dropbox-dash-relevance-judge-with-dspy">Dropbox Tech Blog (2026.03)</a></span>
+  </div>
+
+</div>
+</body>
+</html>

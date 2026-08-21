@@ -165,7 +165,7 @@ def consolidate_appendix_notes(
     notes: list[str],
     *,
     chat_fn,
-    max_completion_tokens: int = 4096,
+    max_completion_tokens: int = 0,
 ) -> list[str]:
     """LLM-consolidate appendix notes: dedupe / merge / compact.
 

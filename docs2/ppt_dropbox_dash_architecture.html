@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Dropbox Dash — Skill/Prompt 自演进实现方案架构图</title>
+<style>
+  @page { size: landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: #f8fafc; color: #1f2937;
+  }
+  .slide {
+    width: 100vw; height: 100vh; min-height: 720px;
+    display: grid; grid-template-rows: auto 1fr auto;
+    padding: 8px 18px 6px;
+  }
+
+  /* Header */
+  .head { display: flex; align-items: baseline; gap: 14px; border-bottom: 2.5px solid #0f1e3a; padding-bottom: 5px; }
+  .head h1 { font-size: 19px; font-weight: 800; color: #0f1e3a; }
+  .head h1 .accent { color: #7c3aed; }
+  .head h1 .arrow { color: #94a3b8; font-weight: 600; font-size: 17px; }
+  .head .tag { font-size: 10.5px; background: #faf5ff; color: #7c3aed; padding: 2px 10px; border-radius: 10px; font-weight: 600; border: 1px solid #ddd6fe; }
+  .head .sub { font-size: 11px; color: #64748b; margin-left: auto; }
+  .head .sub b { color: #0f1e3a; }
+
+  /* Body */
+  .body { padding-top: 6px; overflow: hidden; display: flex; flex-direction: column; gap: 4px; }
+
+  /* 顶层: 度量定义 */
+  .measure {
+    border: 1.5px solid #475569; border-radius: 8px; padding: 5px 10px;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .measure .m-label { font-size: 10px; font-weight: 800; color: #334155; white-space: nowrap; }
+  .measure .m-items { display: flex; gap: 6px; flex: 1; }
+  .m-item { background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; flex: 1; text-align: center; }
+  .m-item .mi-t { font-size: 9px; font-weight: 800; color: #334155; }
+  .m-item .mi-d { font-size: 7.8px; color: #64748b; line-height: 1.3; margin-top: 1px; }
+  .measure .m-arrow { font-size: 14px; color: #94a3b8; font-weight: 800; }
+
+  /* 中层: 三条优化路径 */
+  .paths { flex: 1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; overflow: hidden; }
+
+  .path { border-radius: 8px; border: 1.5px solid; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+  .path-a { border-color: #2563eb; background: linear-gradient(160deg, #eff6ff, #f0f9ff); }  /* 全量适配 蓝 */
+  .path-b { border-color: #7c3aed; background: linear-gradient(160deg, #faf9ff, #f5f3ff); }  /* 操作可靠 紫 */
+  .path-c { border-color: #b45309; background: linear-gradient(160deg, #fffdf7, #fffbeb); } /* 增量演进 琥珀 */
+
+  .p-head { display: flex; align-items: center; gap: 6px; padding-bottom: 3px; border-bottom: 1px solid; }
+  .p-head .p-num { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #fff; flex-shrink: 0; }
+  .path-a .p-head { border-color: #bfdbfe; } .path-a .p-num { background: #2563eb; }
+  .path-b .p-head { border-color: #ddd6fe; } .path-b .p-num { background: #7c3aed; }
+  .path-c .p-head { border-color: #fde68a; } .path-c .p-num { background: #b45309; }
+  .p-head .p-title { font-size: 11px; font-weight: 800; }
+  .path-a .p-title { color: #1e40af; } .path-b .p-title { color: #6d28d9; } .path-c .p-title { color: #92400e; }
+  .p-head .p-sub { font-size: 8px; font-weight: 600; opacity: 0.7; margin-left: auto; font-style: italic; }
+
+  /* 场景/痛点 */
+  .p-scene { font-size: 8.5px; line-height: 1.35; padding: 3px 6px; border-radius: 5px; }
+  .path-a .p-scene { background: #dbeafe; color: #1e3a5f; }
+  .path-b .p-scene { background: #ede9fe; color: #4c1d95; }
+  .path-c .p-scene { background: #fef3c7; color: #78350f; }
+  .p-scene b { font-weight: 800; }
+
+  /* 方法步骤 */
+  .steps { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  .step { background: rgba(255,255,255,0.9); border: 1px solid; border-radius: 5px; padding: 3px 7px; display: flex; align-items: flex-start; gap: 5px; }
+  .step .s-n { width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800; color: #fff; flex-shrink: 0; margin-top: 1px; }
+  .step .s-body { flex: 1; }
+  .step .s-t { font-size: 8.8px; font-weight: 800; }
+  .step .s-d { font-size: 7.5px; line-height: 1.3; color: #475569; margin-top: 1px; }
+  .step .s-tag { font-size: 7px; font-weight: 700; opacity: 0.65; margin-left: 4px; font-style: italic; }
+
+  .path-a .step { border-color: #bfdbfe; } .path-a .step .s-n { background: #2563eb; } .path-a .step .s-t { color: #1e40af; }
+  .path-b .step { border-color: #ddd6fe; } .path-b .step .s-n { background: #7c3aed; } .path-b .step .s-t { color: #6d28d9; }
+  .path-c .step { border-color: #fde68a; } .path-c .step .s-n { background: #b45309; } .path-c .step .s-t { color: #92400e; }
+
+  /* 结果数据条 */
+  .result { border-radius: 6px; padding: 4px 8px; display: flex; gap: 4px; }
+  .path-a .result { background: #dbeafe; border: 1px dashed #2563eb; }
+  .path-b .result { background: #ede9fe; border: 1px dashed #7c3aed; }
+  .path-c .result { background: #fef3c7; border: 1px dashed #b45309; }
+  .r-item { flex: 1; text-align: center; }
+  .r-item .rv { font-size: 13px; font-weight: 800; }
+  .r-item .rk { font-size: 7px; color: #475569; line-height: 1.2; }
+  .path-a .rv { color: #1e40af; } .path-b .rv { color: #6d28d9; } .path-c .rv { color: #92400e; }
+
+  /* 下游服务 */
+  .downstream {
+    border: 1.5px solid #059669; border-radius: 8px; padding: 5px 10px;
+    background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ds-label { font-size: 10px; font-weight: 800; color: #047857; white-space: nowrap; }
+  .ds-items { display: flex; gap: 6px; flex: 1; }
+  .ds-item { background: #fff; border: 1px solid #a7f3d0; border-radius: 6px; padding: 4px 8px; flex: 1; text-align: center; }
+  .ds-item .di-t { font-size: 9px; font-weight: 800; color: #047857; }
+  .ds-item .di-d { font-size: 7.5px; color: #475569; line-height: 1.25; margin-top: 1px; }
+
+  /* 闭环回流 */
+  .loop-bar {
+    background: linear-gradient(90deg, #ecfdf5, #eff6ff, #faf5ff, #fffbeb);
+    border: 1.5px dashed #94a3b8; border-radius: 8px;
+    padding: 4px 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .loop-label { font-size: 9.5px; font-weight: 800; color: #0f1e3a; white-space: nowrap; }
+  .loop-chain { display: flex; align-items: center; gap: 3px; flex: 1; justify-content: center; }
+  .loop-step { font-size: 8px; font-weight: 700; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+  .ls1 { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+  .ls2 { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+  .ls3 { background: #faf5ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+  .ls4 { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+  .loop-arr { color: #94a3b8; font-size: 11px; font-weight: 800; }
+  .loop-tag { font-size: 9px; font-weight: 800; color: #059669; white-space: nowrap; }
+
+  /* Footer */
+  .foot { border-top: 1px solid #e2e8f0; padding-top: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 9px; }
+  .foot .left { color: #64748b; }
+  .foot .left b { color: #0f1e3a; }
+  .foot .src { font-size: 8px; color: #94a3b8; }
+  .foot .src a { color: #6366f1; }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ============ HEADER ============ -->
+  <div class="head">
+    <h1>Dropbox Dash <span class="arrow">|</span> <span class="accent">Skill/Prompt 自演进实现方案</span></h1>
+    <span class="tag">DSPy 框架统一驱动 · GEPA 富反馈 + 指令库增量演进</span>
+    <span class="sub">来源: <b>Dropbox Engineering Blog</b> (2026.03)</span>
+  </div>
+
+  <div class="body">
+
+    <!-- ====== 顶层: 度量定义 ====== -->
+    <div class="measure">
+      <span class="m-label">度量层 · 定义"什么是好"</span>
+      <div class="m-items">
+        <div class="m-item">
+          <div class="mi-t">人工金标准集</div>
+          <div class="mi-d">小规模(查询,文档,1-5分,人类解释)<br>非敏感内部数据 · 唯一Ground Truth锚</div>
+        </div>
+        <div class="m-item">
+          <div class="mi-t">NMSE 主指标</div>
+          <div class="mi-d">归一化均方误差:裁判分 vs 人类分<br>0=完美一致 · 越小越好</div>
+        </div>
+        <div class="m-item">
+          <div class="mi-t">JSON 格式合法率</div>
+          <div class="mi-d">坏格式判全错(丢样本/断批次)<br>独立约束指标 · 非装饰性</div>
+        </div>
+        <div class="m-item">
+          <div class="mi-t">双目标优化</div>
+          <div class="mi-d">最小化NMSE + 保证输出始终可用<br>= DSPy 优化的目标函数</div>
+        </div>
+      </div>
+      <span class="m-arrow">↓</span>
+    </div>
+
+    <!-- ====== 中层: 三条优化路径 ====== -->
+    <div class="paths">
+
+      <!-- --- 路径A: 全量适配 --- -->
+      <div class="path path-a">
+        <div class="p-head">
+          <span class="p-num">A</span>
+          <span class="p-title">全量适配 — 换新模型时用</span>
+          <span class="p-sub">DSPy + GEPA</span>
+        </div>
+        <div class="p-scene">
+          <b>场景:</b> o3裁判质量高但贵 → 需迁移到gpt-oss-120b(便宜90x) → 手写Prompt直接搬过来质量掉 → 人工调1-2周还追不回
+        </div>
+        <div class="steps">
+          <div class="step">
+            <span class="s-n">1</span>
+            <div class="s-body">
+              <span class="s-t">GEPA 富反馈生成<span class="s-tag">核心</span></span>
+              <div class="s-d">每条分歧: 分差大小+方向+人类解释+模型推理 → 结构化文本反馈(非标量分数)</div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">2</span>
+            <div class="s-body">
+              <span class="s-t">DSPy 反思循环</span>
+              <div class="s-d">评估→失败模式自然语言暴露→Prompt修订→重评→直接优化NMSE</div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">3</span>
+            <div class="s-body">
+              <span class="s-t">反过拟合护栏</span>
+              <div class="s-d">禁止拷贝训练集关键词/用户名/原文到Prompt · 禁止改任务参数(评分范围等)</div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">4</span>
+            <div class="s-body">
+              <span class="s-t">留出集同条件对比</span>
+              <div class="s-d">优化Prompt vs 原手写Prompt在相同任务/数据/指标下直接PK</div>
+            </div>
+          </div>
+        </div>
+        <div class="result">
+          <div class="r-item"><div class="rv">-45%</div><div class="rk">NMSE<br>8.83→4.86</div></div>
+          <div class="r-item"><div class="rv">周→天</div><div class="rk">适配周期<br>1-2周→1-2天</div></div>
+          <div class="r-item"><div class="rv">10-100x</div><div class="rk">同成本<br>标注量扩大</div></div>
+        </div>
+      </div>
+
+      <!-- --- 路径B: 操作可靠性 --- -->
+      <div class="path path-b">
+        <div class="p-head">
+          <span class="p-num">B</span>
+          <span class="p-title">操作可靠性 — 压力测试小模型</span>
+          <span class="p-sub">DSPy + MIPROv2</span>
+        </div>
+        <div class="p-scene">
+          <b>场景:</b> 想用更小的gemma-3-12b做裁判降本 → 但40%输出JSON格式坏 → 样本丢弃/批次失败/评测不可靠
+        </div>
+        <div class="steps">
+          <div class="step">
+            <span class="s-n">1</span>
+            <div class="s-body">
+              <span class="s-t">引入gemma-3-12b压力测试</span>
+              <div class="s-d">更小更便宜但更brittle: 格式/指令遵循能力弱 → 直接暴露系统最弱环节</div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">2</span>
+            <div class="s-body">
+              <span class="s-t">同套优化同时治双重目标</span>
+              <div class="s-d">DSPy同一套框架: 同时优化"评分准确性(NMSE)" + "格式合法性(JSON)"</div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">3</span>
+            <div class="s-body">
+              <span class="s-t">MIPROv2 优化器</span>
+              <div class="s-d">用MIPROv2(非GEPA)适配小模型: 自动学习格式规范+评分规则进Prompt</div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">4</span>
+            <div class="s-body">
+              <span class="s-t">快速量化决策</span>
+              <div class="s-d">用评估框架直接测试→得出"gemma太弱不用于生产高质量路径"的可量化结论(非靠争论)</div>
+            </div>
+          </div>
+        </div>
+        <div class="result">
+          <div class="r-item"><div class="rv">-97%</div><div class="rk">坏格式率<br>40%→&lt;3%(358→9)</div></div>
+          <div class="r-item"><div class="rv">46→17</div><div class="rk">NMSE<br>46.88→17.26</div></div>
+          <div class="r-item"><div class="rv">847/9</div><div class="rk">有效/无效<br>(原498/358)</div></div>
+        </div>
+      </div>
+
+      <!-- --- 路径C: 增量演进 --- -->
+      <div class="path path-c">
+        <div class="p-head">
+          <span class="p-num">C</span>
+          <span class="p-title">增量演进 — 生产o3裁判安全微调</span>
+          <span class="p-sub">指令库 + DSPy选择</span>
+        </div>
+        <div class="p-scene">
+          <b>场景:</b> o3生产线已强且三条流水线依赖 → 大改风险高(改一词corner case就变) → 不重写只增量
+        </div>
+        <div class="steps">
+          <div class="step">
+            <span class="s-n">1</span>
+            <div class="s-body">
+              <span class="s-t">发现分歧案例</span>
+              <div class="s-d">生产o3裁判打分 vs 人类评分出现显著分歧 → 记录该(查询,文档)对</div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">2</span>
+            <div class="s-body">
+              <span class="s-t">人类写解释→蒸馏单行规则</span>
+              <div class="s-d">人类写"文档超一年应降分" → 压缩为bullet: "Documents older than a year should be rated at least one point lower..."</div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">3</span>
+            <div class="s-body">
+              <span class="s-t">DSPy 选择+组装(非生成)</span>
+              <div class="s-d">DSPy不重写Prompt — 只从指令库选哪些bullet组装进去、怎么组合 · 验证加哪条不引入副作用</div>
+            </div>
+          </div>
+          <div class="step">
+            <span class="s-n">4</span>
+            <div class="s-body">
+              <span class="s-t">"小PR+测试"模式</span>
+              <div class="s-d">每条bullet附带触发它的分歧案例做验证 → 增量改/回归可诊断/基线稳定 → 持续推高对齐</div>
+            </div>
+          </div>
+        </div>
+        <div class="result">
+          <div class="r-item"><div class="rv">持续↑</div><div class="rk">裁判与人类<br>对齐累积提升</div></div>
+          <div class="r-item"><div class="rv">不回退</div><div class="rk">已有行为<br>基线稳定</div></div>
+          <div class="r-item"><div class="rv">可追溯</div><div class="rk">每条规则<br>有分歧案例出处</div></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ====== 下游服务 ====== -->
+    <div class="downstream">
+      <span class="ds-label">↓ 优化后的裁判服务三条生产流水线</span>
+      <div class="ds-items">
+        <div class="ds-item"><div class="di-t">排序流水线</div><div class="di-d">在线: 搜索结果按裁判打分排序展示 [低时延]</div></div>
+        <div class="ds-item"><div class="di-t">训练数据生成</div><div class="di-d">离线: 裁判批量打标10-100x → 喂排序模型训练 [高吞吐]</div></div>
+        <div class="ds-item"><div class="di-t">离线评测流水线</div><div class="di-d">离线: 裁判打分做版本验收/回归检测 [一致性]</div></div>
+      </div>
+    </div>
+
+    <!-- ====== 闭环回流 ====== -->
+    <div class="loop-bar">
+      <span class="loop-label">越用越好闭环:</span>
+      <div class="loop-chain">
+        <span class="loop-step ls1">线上裁判执行</span>
+        <span class="loop-arr">→</span>
+        <span class="loop-step ls2">分歧案例涌现(裁判vs人类)</span>
+        <span class="loop-arr">→</span>
+        <span class="loop-step ls3">人类写解释→蒸馏bullet规则</span>
+        <span class="loop-arr">→</span>
+        <span class="loop-step ls4">DSPy选择组装→门控验证</span>
+        <span class="loop-arr">→</span>
+        <span class="loop-step ls1">裁判进化上线</span>
+        <span class="loop-arr">→</span>
+        <span class="loop-tag">↻ 持续增益</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ Footer ============ -->
+  <div class="foot">
+    <span class="left"><b>一句话:</b> Dash以人工金标准锚定对错+NMSE×格式双目标,DSPy统一驱动:换新模型用GEPA全量适配(反过拟合护栏),压力测试小模型用MIPROv2治格式+评分,生产强模型用指令库bullet增量组装("小PR+测试")—裁判越用越准、适配周→天、标注扩10-100x</span>
+    <span class="src">来源: <a href="https://dropbox.tech/machine-learning/optimizing-dropbox-dash-relevance-judge-with-dspy">Dropbox Tech Blog — How we optimized Dash's relevance judge with DSPy (2026.03)</a></span>
+  </div>
+
+</div>
+</body>
+</html>

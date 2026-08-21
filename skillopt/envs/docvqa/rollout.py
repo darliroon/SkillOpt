@@ -134,7 +134,7 @@ def process_one(
     max_turns: int = 1,
     exec_timeout: int = 120,
     image_detail: str = "auto",
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     diagnostic_mode: bool = False,
     diagnostic_instruction: str = "",
 ) -> dict:
@@ -267,7 +267,7 @@ def run_batch(
     exec_timeout: int = 120,
     workers: int = 16,
     image_detail: str = "auto",
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     diagnostic_mode: bool = False,
     diagnostic_instruction: str = "",
     task_timeout: int = 600,

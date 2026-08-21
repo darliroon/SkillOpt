@@ -25,7 +25,7 @@ class DocVQAAdapter(EnvAdapter):
         seed: int = 42,
         limit: int = 0,
         image_detail: str = "auto",
-        max_completion_tokens: int = 16384,
+        max_completion_tokens: int = 0,
     ) -> None:
         self.max_turns = max_turns
         self.exec_timeout = exec_timeout

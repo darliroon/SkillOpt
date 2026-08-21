@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Skill自演进落地案例 — 三个场景 × 已上线产品案例</title>
+<style>
+  @page { size: landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: #ffffff; color: #1f2937;
+  }
+  .slide {
+    width: 100vw; height: 100vh; min-height: 700px;
+    display: grid; grid-template-rows: auto 1fr auto;
+    padding: 10px 24px 8px;
+  }
+  /* ---------- Header ---------- */
+  .head { display: flex; align-items: baseline; gap: 14px; border-bottom: 2px solid #2563eb; padding-bottom: 6px; }
+  .head h1 { font-size: 21px; font-weight: 800; color: #0f1e3a; }
+  .head h1 .accent { color: #2563eb; }
+  .head .tag { font-size: 11px; background: #eff6ff; color: #2563eb; padding: 2px 10px; border-radius: 10px; font-weight: 600; border: 1px solid #bfdbfe; }
+  .head .sub { font-size: 11px; color: #64748b; margin-left: auto; }
+
+  /* ---------- Body ---------- */
+  .body { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding-top: 8px; overflow: hidden; }
+  .col { display: flex; flex-direction: column; border: 1.5px solid; border-radius: 10px; overflow: hidden; }
+  .c1 { border-color: #93c5fd; } .c2 { border-color: #c4b5fd; } .c3 { border-color: #a7f3d0; }
+
+  .col-head { padding: 7px 12px 6px; color: #fff; }
+  .c1 .col-head { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+  .c2 .col-head { background: linear-gradient(90deg, #7c3aed, #8b5cf6); }
+  .c3 .col-head { background: linear-gradient(90deg, #059669, #10b981); }
+  .col-head .num { font-size: 9px; font-weight: 700; opacity: .85; letter-spacing: 1px; }
+  .col-head .t1 { font-size: 14px; font-weight: 800; margin-top: 1px; }
+  .col-head .t2 { font-size: 10.5px; font-weight: 600; opacity: .95; margin-top: 1px; }
+
+  .col-body { padding: 7px 10px 8px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+
+  .mech { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 8px; font-size: 9.5px; color: #475569; line-height: 1.45; }
+  .mech b { color: #0f1e3a; }
+  .mech .m-tag { display: block; font-size: 8.5px; font-weight: 700; color: #94a3b8; letter-spacing: 1px; margin-bottom: 2px; }
+
+  .case { border-radius: 6px; padding: 6px 8px; border: 1px solid; }
+  .c1 .case { background: #eff6ff; border-color: #bfdbfe; }
+  .c2 .case { background: #f5f3ff; border-color: #ddd6fe; }
+  .c3 .case { background: #ecfdf5; border-color: #a7f3d0; }
+  .case .pname { font-size: 11.5px; font-weight: 800; margin-bottom: 2px; }
+  .c1 .pname { color: #1d4ed8; } .c2 .pname { color: #6d28d9; } .c3 .pname { color: #047857; }
+  .case .pdesc { font-size: 9px; color: #475569; line-height: 1.4; }
+  .case .pdesc b { color: #0f1e3a; }
+
+  .stat-row { display: flex; gap: 4px; margin-top: 2px; }
+  .c1 .stat { background: #dbeafe; } .c2 .stat { background: #ede9fe; } .c3 .stat { background: #d1fae5; }
+  .stat { flex: 1; border-radius: 5px; text-align: center; padding: 3px 2px; }
+  .stat .sv { font-size: 12.5px; font-weight: 800; }
+  .c1 .stat .sv { color: #1e40af; } .c2 .stat .sv { color: #5b21b6; } .c3 .stat .sv { color: #065f46; }
+  .stat .sk { font-size: 7.8px; color: #475569; line-height: 1.2; margin-top: 1px; }
+
+  .fly { border-radius: 6px; padding: 5px 8px; font-size: 9px; line-height: 1.4; border-style: dashed; border-width: 1.5px; }
+  .fly .f-tag { font-weight: 800; font-size: 8.5px; letter-spacing: 1px; display: block; margin-bottom: 1px; }
+  .c1 .fly { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
+  .c1 .fly .f-tag { color: #b45309; }
+  .c2 .fly { background: #fff7ed; border-color: #fdba74; color: #9a3412; }
+  .c2 .fly .f-tag { color: #c2410c; }
+  .c3 .fly { background: #fefce8; border-color: #fde047; color: #854d0e; }
+  .c3 .fly .f-tag { color: #a16207; }
+
+  .src { font-size: 7.5px; color: #94a3b8; margin-top: auto; padding-top: 2px; line-height: 1.35; }
+
+  /* ---------- Footer ---------- */
+  .foot { border-top: 1px solid #e2e8f0; padding-top: 5px; display: flex; align-items: center; gap: 12px; font-size: 9.5px; }
+  .foot .key { color: #b45309; font-weight: 700; flex-shrink: 0; }
+  .foot .ladder { flex: 1; display: flex; align-items: center; gap: 6px; font-size: 9.5px; color: #475569; }
+  .foot .ladder .step { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 12px; padding: 2px 10px; font-weight: 600; color: #334155; white-space: nowrap; }
+  .foot .ladder .step.on1 { background: #dbeafe; border-color: #60a5fa; color: #1e40af; }
+  .foot .ladder .step.on2 { background: #ede9fe; border-color: #a78bfa; color: #5b21b6; }
+  .foot .ladder .step.on3 { background: #d1fae5; border-color: #34d399; color: #065f46; }
+  .foot .ladder .arr { color: #94a3b8; font-weight: 800; }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ============ Header ============ -->
+  <div class="head">
+    <h1>Skill 自演进落地案例 <span class="accent">— 三个场景 × 已上线产品实证</span></h1>
+    <span class="tag">越用越好：用户使用即进化燃料</span>
+    <span class="sub">每个场景均来自已部署产品的公开工程实践与论文披露数据</span>
+  </div>
+
+  <!-- ============ Body ============ -->
+  <div class="body">
+
+    <!-- ======== 场景1：用户交互驱动 → 时延降低 ======== -->
+    <div class="col c1">
+      <div class="col-head">
+        <div class="num">SCENARIO 01</div>
+        <div class="t1">用户交互驱动自演进</div>
+        <div class="t2">目标：Skill 时延持续降低</div>
+      </div>
+      <div class="col-body">
+        <div class="mech">
+          <span class="m-tag">演进机制</span>
+          线上交互轨迹持续沉淀 → 高频问答被<b>自动挖掘并固化为验证缓存</b>（命中即返回，绕开 LLM/RAG）→ 用户用得越多、缓存越全、时延越低
+        </div>
+        <div class="case">
+          <div class="pname">Minerva CQ · 客服实时辅助产品</div>
+          <div class="pdesc">
+            已部署于语音客服生产的 Agent Assist（arXiv 2509.12589）。从<b>历史通话轨迹+实时使用</b>中挖掘高频 FAQ，
+            新问题经启发式+本体校验后入缓存，命中即<0.5s 直答，完全绕过 RAG 链路。
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="sv">70%</div><div class="sk">万通电话中 7000 问<br>命中验证缓存</div></div>
+            <div class="stat"><div class="sv">&lt;0.5s</div><div class="sk">缓存响应<br>vs RAG 5-9s</div></div>
+            <div class="stat"><div class="sv">-6s/问</div><div class="sk">每问省 6 秒<br>万通累计省 11.7h</div></div>
+          </div>
+        </div>
+        <div class="fly">
+          <span class="f-tag">为什么越用越好</span>
+          缓存由真实交互<b>持续挖矿填充</b>，命中率随使用量单调上升；高频问题逐步从"LLM 现算"降级为"缓存直取"，时延与推理成本同步下降。
+        </div>
+        <div class="src">来源：Minerva CQ 论文 (arXiv:2509.12589) · 生产环境案例研究</div>
+      </div>
+    </div>
+
+    <!-- ======== 场景2：Eval驱动 → 成功率提升 ======== -->
+    <div class="col c2">
+      <div class="col-head">
+        <div class="num">SCENARIO 02</div>
+        <div class="t1">Eval 驱动自演进</div>
+        <div class="t2">目标：Skill 成功率提升</div>
+      </div>
+      <div class="col-body">
+        <div class="mech">
+          <span class="m-tag">演进机制</span>
+          离线评测集批量执行 → <b>富反馈归因诊断</b> → 自动生成补丁候选 → 帕累托前沿择优 → 门控上线；生产反馈回流触发下一轮重训
+        </div>
+        <div class="case">
+          <div class="pname">Databricks Agent Bricks · 信息抽取(IE) Agent</div>
+          <div class="pdesc">
+            产品问题：企业级<b>PDF/扫描件→结构化记录</b>抽取（百页文档、70+字段嵌套Schema），前沿闭源模型太贵、开源模型精度不够。
+            方案：以 <b>gpt-oss-120b</b> 为学生模型、Claude Sonnet 4 为优化器，在 IE Bench 上跑 GEPA 反思进化 →
+            <b>优化后反超此前榜首 Claude Opus 4.1 基线 +2.2 分</b>，同时服务成本仅其 1/90。
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="sv">+4.3</div><div class="sk">gpt-oss-120b<br>优化后提升(分)</div></div>
+            <div class="stat"><div class="sv">+2.2</div><div class="sk">反超 Opus 4.1<br>原SOTA基线</div></div>
+            <div class="stat"><div class="sv">90x</div><div class="sk">服务成本<br>更便宜</div></div>
+          </div>
+        </div>
+        <div class="case">
+          <div class="pname">Dropbox Dash · 搜索相关性 Judge</div>
+          <div class="pdesc">
+            产品问题：Judge 原用 OpenAI o3 太贵无法全量打分，Prompt 换模型即失效。方案：GEPA 用<b>"人机评分分歧+人类解释"作富反馈</b>迭代适配 gpt-oss-120b →
+            <b>NMSE 降 45%（8.83→4.86）</b>，同成本标注量扩 10-100 倍；换模型适配从 1-2 周 → 1-2 天。
+          </div>
+        </div>
+        <div class="fly">
+          <span class="f-tag">为什么越用越好</span>
+          Dropbox 对生产 o3 Judge 采用<b>"指令库增量演进"</b>：线上分歧案例→人类写短解释→蒸馏为单行规则→DSPy 只做规则选择组装（类似"带测试的小PR"），
+          Judge 随分歧案例积累持续逼近人类判断，<b>稳定不回退</b>。
+        </div>
+        <div class="src">来源：Databricks AI Research 博客 (2025.09) · Dropbox 工程博客 (2026.03) · GEPA (ICLR 2026 Oral)</div>
+      </div>
+    </div>
+
+    <!-- ======== 场景3：md → Scripts 迁移 ======== -->
+    <div class="col c3">
+      <div class="col-head">
+        <div class="num">SCENARIO 03</div>
+        <div class="t1">高频 Skill：纯文本 md → Scripts</div>
+        <div class="t2">目标：降低模型开销与加载时延、提升执行性能</div>
+      </div>
+      <div class="col-body">
+        <div class="mech">
+          <span class="m-tag">演进机制</span>
+          高频稳定流程<b>脚本化固化</b>（scripts/ 目录）→ 脚本<b>不进入上下文窗口</b>、仅输出消耗 Token → <b>确定性执行</b>无 LLM 推理偏差，验证后替代"每次 LLM 现推理"
+        </div>
+        <div class="case">
+          <div class="pname">Anthropic Skills 标准 + Rakuten + CData</div>
+          <div class="pdesc">
+            Skills 标准采用<b>渐进式披露</b>：元数据常驻~50 Tokens，触发才加载指令、按需读资源；CData 实测 Skills+MCP 组合<b>显著降低 Token 用量</b>；
+            Rakuten 将财务工作流脚本化为 Skills：<b>8 小时任务 → 1 小时</b>。
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="sv">50↔3000</div><div class="sk">初始加载 Tokens<br>Skills vs 传统 MCP</div></div>
+            <div class="stat"><div class="sv">0</div><div class="sk">脚本代码消耗<br>上下文窗口</div></div>
+            <div class="stat"><div class="sv">8h→1h</div><div class="sk">Rakuten 财务流程<br>耗时压缩</div></div>
+          </div>
+        </div>
+        <div class="fly">
+          <span class="f-tag">为什么越用越好</span>
+          使用频率越高，脚本化的确定性收益越显著（执行性能↑、Token/时延↓）；Skill 演进呈现<b>"交互沉淀 → Eval 验证 → 脚本固化"</b>的晋升路径，
+          固化后按需执行、常驻开销趋近于零。
+        </div>
+        <div class="src">来源：Anthropic《The Complete Guide to Building Skills for Claude》· claude.com/skills 案例 · CData 工程博客</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ Footer ============ -->
+  <div class="foot">
+    <span class="key">三个场景构成 Skill 能力晋升阶梯：</span>
+    <div class="ladder">
+      <span class="step on1">交互沉淀</span><span class="arr">→</span>
+      <span class="step on2">Eval 迭代</span><span class="arr">→</span>
+      <span class="step on3">脚本固化</span>
+      <span style="margin-left:6px;">每一级都以真实用户使用为燃料，越用越好、越用越省</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

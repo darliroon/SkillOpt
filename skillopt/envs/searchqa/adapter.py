@@ -30,7 +30,7 @@ class SearchQAAdapter(EnvAdapter):
         edit_budget: int = 4,
         seed: int = 42,
         limit: int = 0,
-        max_completion_tokens: int = 16384,
+        max_completion_tokens: int = 0,
     ) -> None:
         self.max_turns = max_turns
         self.exec_timeout = exec_timeout

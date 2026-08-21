@@ -37,6 +37,7 @@ def run_meta_skill(
     *,
     prev_meta_skill_content: str = "",
     system_prompt: str | None = None,
+    max_completion_tokens: int = 0,
 ) -> dict | None:
     """Produce updated optimizer-side meta skill from adjacent epochs."""
     actual_system = system_prompt if system_prompt is not None else load_prompt("meta_skill")
@@ -63,7 +64,7 @@ def run_meta_skill(
         response, _ = chat_optimizer(
             system=actual_system,
             user=user,
-            max_completion_tokens=16384,
+            max_completion_tokens=max_completion_tokens,
             retries=3,
             stage="meta_skill",
         )

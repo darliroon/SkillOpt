@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>已有 Skill 演进:成功率↑ + 时延↓ + Token↓ 的三种思路</title>
+<style>
+  @page { size: landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: #ffffff; color: #1f2937;
+  }
+  .slide {
+    width: 100vw; height: 100vh; min-height: 720px;
+    display: grid; grid-template-rows: auto 1fr auto;
+    padding: 10px 24px 8px;
+  }
+  /* ---------- Header ---------- */
+  .head { display: flex; align-items: baseline; gap: 14px; border-bottom: 2px solid #2563eb; padding-bottom: 6px; }
+  .head h1 { font-size: 23px; font-weight: 800; color: #0f1e3a; }
+  .head h1 .accent { color: #2563eb; }
+  .head h1 .arrow { color: #94a3b8; font-weight: 600; font-size: 20px; }
+  .head .sub { font-size: 12px; color: #64748b; margin-left: auto; }
+  .head .tag { font-size: 11px; background: #eff6ff; color: #2563eb; padding: 2px 10px; border-radius: 10px; font-weight: 600; border: 1px solid #bfdbfe; }
+
+  .body { display: grid; grid-template-rows: 0.62fr 1.38fr; gap: 8px; padding-top: 7px; overflow: hidden; }
+  .section { display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+  .sec-title { font-size: 13px; font-weight: 700; color: #b45309; display: flex; align-items: center; gap: 8px; }
+  .sec-title .num { background: #b45309; color: #fff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+  .sec-title .hint { font-size: 10px; color: #94a3b8; font-weight: 500; margin-left: auto; }
+
+  .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 12px; }
+
+  /* ---- 上半:三角约束 ---- */
+  .triad { display: flex; align-items: stretch; gap: 0; flex: 1; }
+  .triad .pole { flex: 1; text-align: center; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 4px; border-radius: 7px; border: 1px solid; }
+  .triad .pole .ico { font-size: 20px; }
+  .triad .pole .lbl { font-size: 12px; font-weight: 800; }
+  .triad .pole .desc { font-size: 10px; line-height: 1.35; }
+  .p-success { background: #f0fdf4; border-color: #86efac; } .p-success .lbl, .p-success .ico { color: #059669; } .p-success .desc { color: #047857; }
+  .p-latency  { background: #fffbeb; border-color: #fde68a; } .p-latency .lbl, .p-latency .ico { color: #b45309; } .p-latency .desc { color: #92400e; }
+  .p-token    { background: #eff6ff; border-color: #bfdbfe; } .p-token .lbl, .p-token .ico { color: #2563eb; } .p-token .desc { color: #1e3a5f; }
+  .triad .vs { display: flex; align-items: center; justify-content: center; font-size: 18px; color: #94a3b8; font-weight: 700; padding: 0 3px; }
+
+  .triad-note { background: #fefce8; border: 1px solid #fde68a; border-radius: 5px; padding: 4px 10px; font-size: 10px; color: #92400e; display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .triad-note b { color: #b45309; }
+
+  /* ---- 下半:三路线 ---- */
+  .route-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; flex: 1; overflow: hidden; }
+  .rcard { border: 1px solid #e2e8f0; border-top: 3px solid; border-radius: 7px; padding: 7px 10px; display: flex; flex-direction: column; gap: 4px; background: #fff; overflow: hidden; }
+  .rcard .rh { display: flex; align-items: baseline; gap: 6px; }
+  .rcard .rname { font-size: 13px; font-weight: 800; }
+  .rcard .rsrc { font-size: 9px; color: #94a3b8; margin-left: auto; }
+  .rcard .rkey { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 9px; align-self: flex-start; }
+  .rcard .rmeta { font-size: 9.8px; color: #475569; line-height: 1.4; }
+  .rcard .rmeta b { color: #0f1e3a; }
+  .rcard .flow { font-family: Consolas, monospace; font-size: 9.5px; line-height: 1.35; color: #334155; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 4px; padding: 4px 6px; }
+  .rcard .flow b { color: #0f766e; }
+  .rcard .feat { font-size: 10px; line-height: 1.42; display: flex; flex-direction: column; gap: 2px; }
+  .rcard .feat .f { display: flex; gap: 4px; }
+  .rcard .feat .fi { flex-shrink: 0; font-weight: 800; }
+  .rcard .num-strip { font-size: 9.5px; color: #92400e; background: #fefce8; border: 1px solid #fde68a; border-radius: 4px; padding: 3px 6px; line-height: 1.35; margin-top: auto; }
+  .rcard .trade { font-size: 9.5px; color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 3px 6px; line-height: 1.35; }
+
+  .r1 { border-top-color: #7c3aed; } .r1 .rname { color: #6d28d9; } .r1 .rkey { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; } .r1 .feat .fi { color: #7c3aed; }
+  .r2 { border-top-color: #dc2626; } .r2 .rname { color: #b91c1c; } .r2 .rkey { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; } .r2 .feat .fi { color: #dc2626; }
+  .r3 { border-top-color: #059669; } .r3 .rname { color: #047857; } .r3 .rkey { background: #f0fdf4; color: #047857; border: 1px solid #a7f3d0; } .r3 .feat .fi { color: #059669; }
+
+  .cmp { display: grid; grid-template-columns: 80px repeat(3, 1fr); gap: 2px 8px; font-size: 9.5px; line-height: 1.4; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 10px; margin-top: 4px; }
+  .cmp .ch { font-weight: 700; color: #94a3b8; font-size: 9px; text-transform: uppercase; }
+  .cmp .cl { color: #64748b; font-weight: 600; }
+  .cmp .cv { color: #334155; }
+  .cmp .c1 { color: #6d28d9; } .cmp .c2 { color: #b91c1c; } .cmp .c3 { color: #047857; }
+
+  .foot { border-top: 1px solid #e2e8f0; padding-top: 5px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; }
+  .foot .key { color: #b45309; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ============ HEADER ============ -->
+  <div class="head">
+    <h1>已有 Skill 演进 <span class="arrow">|</span> <span class="accent">成功率↑ + 时延↓ + Token↓</span> 的三种思路</h1>
+    <span class="tag">效率演进路线全景</span>
+    <span class="sub">不改模型权重 · 优化的是技能的执行形态、内容形态、加载策略</span>
+  </div>
+
+  <div class="body">
+
+    <!-- ========== 上半:三角约束 ========== -->
+    <div class="section">
+      <div class="sec-title"><span class="num">A</span>演进目标:同时满足三个相互拉扯的约束<span class="hint">单纯提升成功率容易,难在三个指标同时优化</span></div>
+      <div class="card" style="display:flex;flex-direction:column;padding:5px 8px;">
+        <div class="triad">
+          <div class="pole p-success">
+            <div class="ico">✓</div>
+            <div class="lbl">成功率 ↑</div>
+            <div class="desc">技能要给出正确、可验证的执行结果,这是底线</div>
+          </div>
+          <div class="vs">⇄</div>
+          <div class="pole p-latency">
+            <div class="ico">⚡</div>
+            <div class="lbl">时延 ↓</div>
+            <div class="desc">端到端完成时间要短,减少 LLM 推理轮次 / 等待</div>
+          </div>
+          <div class="vs">⇄</div>
+          <div class="pole p-token">
+            <div class="ico">§</div>
+            <div class="lbl">Token ↓</div>
+            <div class="desc">上下文窗口占用要少,降 API 成本与注意力稀释</div>
+          </div>
+        </div>
+        <div class="triad-note">
+          <b>张力所在:</b>成功率↑ 通常需要<b>更多上下文 + 更多推理轮次</b>(加规则、加示例),而这恰使时延↑ 与 Token↑。<b>朴素自演进</b>只优化成功率,会把技能越写越长;三条思路分别从不同切面打破这一张力。
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 下半:三条思路 ========== -->
+    <div class="section">
+      <div class="sec-title"><span class="num">B</span>三条特色思路 — 改变技能的「执行形态 / 内容形态 / 加载策略」<span class="hint">各有特色,互不重复</span></div>
+      <div class="route-row">
+
+        <!-- 思路1: Skills to Scripts -->
+        <div class="rcard r1">
+          <div class="rh"><span class="rname">Skills → Scripts</span><span class="rsrc">SkVM · SJTU · arXiv 2604.03088</span></div>
+          <div class="rkey">思路一:编译为可执行代码 — JIT 代码固化</div>
+          <div class="rmeta">把 NL 技能当作<b>源码</b>,LLM 当异构处理器;离线编译 + 运行期 <b>JIT 固化</b>把高频步骤从"每次让 LLM 推理"变成"直接跑确定性代码",<b>彻底绕过 LLM</b>。</div>
+          <div class="flow">技能 NL → 能力分解 → 编译绑定环境<br>→ 并发提取 → 运行期 <b>JIT 固化</b><br>稳定路径 → 确定性脚本(零 LLM 调用)</div>
+          <div class="feat">
+            <div class="f"><span class="fi">▪</span><span><b>代码固化</b>:反复执行同一流程→编译为脚本,毫秒级完成</span></div>
+            <div class="f"><span class="fi">▪</span><span><b>自适应重编译</b>:环境变化时自动回退到 LLM 推理</span></div>
+            <div class="f"><span class="fi">▪</span><span><b>并发提取</b>:独立步骤并行执行,进一步压缩时延</span></div>
+          </div>
+          <div class="num-strip"><b>SkVM 成绩</b>:Token ↓ <b>40%</b>;延迟降低 <b>19–50×</b>(代码固化);并发加速 <b>3.2×</b>。<b>SkillSmith</b>(同类):Token ↓ 57%、迭代 ↓ 43%、耗时 ↓ 51%。</div>
+          <div class="trade"><b>代价</b>:环境微变即失效,需重编译;编译期有额外开销</div>
+        </div>
+
+        <!-- 思路2: Skill De-bloating -->
+        <div class="rcard r2">
+          <div class="rh"><span class="rname">Skill De-bloating</span><span class="rsrc">SkillReducer · HKUST · arXiv 2603.29919</span></div>
+          <div class="rkey">思路二:技能去膨胀 — 核心规则 vs 示例分层按需展开</div>
+          <div class="rmeta">技能保持<b>文本形态不变</b>,但系统化删除冗余。路由描述压缩到最短,正文按<b>分类学</b>切片:"可操作核心规则"始终加载,"示例/背景"转为<b>渐进式按需展开</b>。</div>
+          <div class="flow">Stage 1 路由层:delta debugging<br>→ 描述压到 <b>1-minimal</b> 形式<br>Stage 2 正文:分类学切片<br>→ 核心常驻 + 非核心 <b>progressive disclosure</b></div>
+          <div class="feat">
+            <div class="f"><span class="fi">▪</span><span><b>less-is-more</b>:删非必要内容反而↑质量(减注意力稀释)</span></div>
+            <div class="f"><span class="fi">▪</span><span><b>忠实性检查</b>:压缩后用任务评测闭环验证不丢功能</span></div>
+            <div class="f"><span class="fi">▪</span><span>跨 5 模型 / 4 家族迁移,保留率 <b>0.965</b></span></div>
+          </div>
+          <div class="num-strip"><b>SkillReducer 成绩</b>:描述压缩 <b>48%</b>、正文压缩 <b>39%</b>、功能质量反而 <b>+2.8%</b>。基于 55,315 个公开技能实证:60%+ 正文为非可操作内容。</div>
+          <div class="trade"><b>代价</b>:分类与切片依赖分类器质量;高压缩率下短技能效果有限</div>
+        </div>
+
+        <!-- 思路3: Skill Routing -->
+        <div class="rcard r3">
+          <div class="rh"><span class="rname">Skill Routing</span><span class="rsrc">Skill Weaver · Alibaba · 2026</span></div>
+          <div class="rkey">思路三:按需路由 — 分解→检索→组合,不全量加载</div>
+          <div class="rmeta">不把所有技能塞进上下文,而是<b>先分解任务</b>为子步骤,每步用 embedding <b>只检索最相关的 1–3 个技能</b>,再组合成执行图(DAG)。默认只暴露技能名+描述,命中才拉全文。</div>
+          <div class="flow"><b>Decompose</b>:LLM 拆复杂请求为子任务<br><b>Retrieve</b>:每步 embedding 检索 Top-K 候选<br><b>Compose</b>:评估兼容性 → DAG 执行图</div>
+          <div class="feat">
+            <div class="f"><span class="fi">▪</span><span><b>组合式路由</b>:一个请求可能跨多个技能,非单选</span></div>
+            <div class="f"><span class="fi">▪</span><span><b>反馈迭代</b>(SAD):检索不准时迭代补充候选</span></div>
+            <div class="f"><span class="fi">▪</span><span>DAG 中独立节点可<b>并行执行</b>进一步降时延</span></div>
+          </div>
+          <div class="num-strip"><b>Skill Weaver 成绩</b>:对比全量加载,Token 用量降 <b>99%+</b>,准确率显著提升。<b>Copilot Studio</b>同思路:10 技能只花 10 条短描述的开销。</div>
+          <div class="trade"><b>代价</b>:分解粒度是最大瓶颈;检索不准导致漏载关键技能</div>
+        </div>
+      </div>
+
+      <!-- 对比条 -->
+      <div class="cmp">
+        <div class="ch">对比维度</div><div class="ch c1">Skills→Scripts</div><div class="ch c2">De-bloating</div><div class="ch c3">Routing</div>
+        <div class="cl">改变了什么</div><div class="cv c1">执行形态(文本→代码)</div><div class="cv c2">内容形态(长文本→精简分层)</div><div class="cv c3">加载策略(全量→按需)</div>
+        <div class="cl">降 Token</div><div class="cv c1">固化路径零调用</div><div class="cv c2">删冗余 + 按需展开</div><div class="cv c3">只载入相关技能</div>
+        <div class="cl">降时延</div><div class="cv c1">毫秒级代码执行</div><div class="cv c2">上下文短→推理快</div><div class="cv c3">窗口小 + DAG 并行</div>
+        <div class="cl">提成功率</div><div class="cv c1">确定性消除幻觉</div><div class="cv c2">减注意力稀释</div><div class="cv c3">减工具选择干扰</div>
+        <div class="cl">主要风险</div><div class="cv c1">环境变化即失效</div><div class="cv c2">分类器误判丢规则</div><div class="cv c3">检索漏载关键技能</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>三者可<b class="key">正交组合</b>:先 De-bloat 去冗余 → 再 Routing 按需加载 → 高频路径 Scripts 固化为代码</span>
+    <span>与 SkillOpt 等"训练提升成功率"的路线<b class="key">互补</b>:前者管"对不对",这三条管"快不快、省不省"</span>
+  </div>
+</div>
+</body>
+</html>

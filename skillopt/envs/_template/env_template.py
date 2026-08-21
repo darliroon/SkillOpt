@@ -44,7 +44,7 @@ class TemplateBenchmarkEnv(EnvAdapter):
         edit_budget: int = 4,
         seed: int = 42,
         limit: int = 0,
-        max_completion_tokens: int = 4096,
+        max_completion_tokens: int = 0,
     ) -> None:
         self.workers = workers
         self.analyst_workers = analyst_workers

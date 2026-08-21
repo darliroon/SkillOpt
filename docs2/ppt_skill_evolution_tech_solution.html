@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Skill自演进 — 技术方案图</title>
+<style>
+  @page { size: landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: #ffffff; color: #1f2937;
+  }
+  .slide {
+    width: 100vw; height: 100vh; min-height: 720px;
+    display: grid; grid-template-rows: auto 1fr auto;
+    padding: 10px 24px 8px;
+  }
+
+  /* ---------- Header ---------- */
+  .head { display: flex; align-items: baseline; gap: 14px; border-bottom: 2px solid #2563eb; padding-bottom: 6px; }
+  .head h1 { font-size: 22px; font-weight: 800; color: #0f1e3a; }
+  .head h1 .accent { color: #2563eb; }
+  .head h1 .arrow { color: #94a3b8; font-weight: 600; font-size: 19px; }
+  .head .sub { font-size: 12px; color: #64748b; margin-left: auto; }
+  .head .tag { font-size: 11px; background: #eff6ff; color: #2563eb; padding: 2px 10px; border-radius: 10px; font-weight: 600; border: 1px solid #bfdbfe; }
+
+  /* ---------- Body: 上下两个方案 ---------- */
+  .body { padding-top: 8px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
+
+  .scheme { flex: 1; border-radius: 8px; border: 1.5px solid; padding: 7px 10px; display: flex; flex-direction: column; gap: 5px; overflow: hidden; }
+  .scheme-1 { border-color: #7c3aed; background: linear-gradient(135deg, #faf9ff, #f5f3ff); }
+  .scheme-2 { border-color: #b45309; background: linear-gradient(135deg, #fffdf7, #fffbeb); }
+
+  .sc-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .sc-head .sc-num { color: #fff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; align-self: center; }
+  .scheme-1 .sc-num { background: #7c3aed; }
+  .scheme-2 .sc-num { background: #b45309; }
+  .sc-head .sc-title { font-size: 13px; font-weight: 800; }
+  .scheme-1 .sc-title { color: #6d28d9; }
+  .scheme-2 .sc-title { color: #b45309; }
+  .sc-head .sc-ref { font-size: 9px; color: #64748b; font-style: italic; margin-left: auto; }
+  .sc-head .sc-ref b { color: #475569; }
+
+  .sc-desc { font-size: 10px; line-height: 1.45; color: #475569; }
+  .sc-desc b { color: #0f1e3a; }
+
+  /* 四步流程节点 */
+  .flow { display: flex; align-items: stretch; gap: 4px; flex: 1; }
+  .fnode { flex: 1; border-radius: 6px; padding: 5px 7px; border: 1px solid; display: flex; flex-direction: column; gap: 2px; }
+  .fnode .fn-step { display: flex; align-items: center; gap: 5px; }
+  .fnode .fn-step .stepn { color: #fff; width: 15px; height: 15px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; flex-shrink: 0; }
+  .fnode .fn-tag { font-size: 8px; font-weight: 700; opacity: 0.8; margin-left: auto; font-style: italic; }
+  .fnode .fn-name { font-size: 10.5px; font-weight: 800; }
+  .fnode .fn-desc { font-size: 8.5px; line-height: 1.35; }
+  .farrow { display: flex; align-items: center; justify-content: center; font-size: 13px; color: #94a3b8; font-weight: 700; width: 12px; flex-shrink: 0; }
+
+  .n-purple { background: #fff; border-color: #ddd6fe; } .n-purple .fn-name { color: #6d28d9; } .n-purple .fn-desc { color: #4c1d95; } .n-purple .fn-tag { color: #7c3aed; } .n-purple .stepn { background: #7c3aed; }
+  .n-amber { background: #fff; border-color: #fde68a; } .n-amber .fn-name { color: #b45309; } .n-amber .fn-desc { color: #92400e; } .n-amber .fn-tag { color: #b45309; } .n-amber .stepn { background: #b45309; }
+
+  /* 输入/输出小节点 */
+  .io-node { width: 84px; flex-shrink: 0; border-radius: 6px; padding: 5px 6px; border: 1px dashed; display: flex; flex-direction: column; gap: 1px; text-align: center; justify-content: center; }
+  .io-node .io-name { font-size: 9.5px; font-weight: 800; }
+  .io-node .io-desc { font-size: 8px; line-height: 1.25; }
+  .io-in-1 { background: #faf5ff; border-color: #c4b5fd; } .io-in-1 .io-name { color: #6d28d9; } .io-in-1 .io-desc { color: #4c1d95; }
+  .io-out-1 { background: #ede9fe; border-color: #8b5cf6; border-style: solid; border-width: 2px; } .io-out-1 .io-name { color: #5b21b6; } .io-out-1 .io-desc { color: #4c1d95; }
+  .io-in-2 { background: #fffbeb; border-color: #fcd34d; } .io-in-2 .io-name { color: #b45309; } .io-in-2 .io-desc { color: #92400e; }
+  .io-out-2 { background: #fef3c7; border-color: #f59e0b; border-style: solid; border-width: 2px; } .io-out-2 .io-name { color: #92400e; } .io-out-2 .io-desc { color: #78350f; }
+
+  /* 底部标注条 */
+  .sc-note { border-radius: 5px; padding: 3px 8px; font-size: 8.5px; display: flex; align-items: center; gap: 8px; }
+  .scheme-1 .sc-note { background: #f5f3ff; border: 1px dashed #a78bfa; color: #4c1d95; }
+  .scheme-2 .sc-note { background: #fffbeb; border: 1px dashed #f59e0b; color: #78350f; }
+  .sc-note b { font-weight: 800; }
+  .sc-note .pill { padding: 1px 6px; border-radius: 8px; font-weight: 700; flex-shrink: 0; }
+  .scheme-1 .pill { background: #ede9fe; color: #6d28d9; }
+  .scheme-2 .pill { background: #fef3c7; color: #b45309; }
+
+  .foot { border-top: 1px solid #e2e8f0; padding-top: 5px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; }
+  .foot .key { color: #b45309; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ============ HEADER ============ -->
+  <div class="head">
+    <h1>Skill自演进 <span class="arrow">|</span> <span class="accent">技术方案</span></h1>
+    <span class="tag">轨迹归因提炼 × 多目标约束优化</span>
+    <span class="sub">参考 SkillOpt / GEPA / DSPy-SIMBA 成熟方法</span>
+  </div>
+
+  <div class="body">
+
+    <!-- ========== 方案1: 轨迹归因分类与自动化提炼 ========== -->
+    <div class="scheme scheme-1">
+      <div class="sc-head">
+        <span class="sc-num">1</span>
+        <span class="sc-title">轨迹归因分类与自动化提炼 — 从海量无标注轨迹中淘金</span>
+        <span class="sc-ref">参考: <b>GEPA</b> 轨迹反思归因 · <b>SIMBA</b> 高方差样本挖掘 · <b>SkillOpt</b> 回放校准</span>
+      </div>
+      <div class="sc-desc">
+        借鉴GEPA轨迹反思与SIMBA高方差样本挖掘:<b>语义切片对齐定位成败分叉点</b>,信息增益筛选高价值样本,回放校准剥离噪声,自动提炼可训练案例对。
+      </div>
+      <div class="flow">
+        <div class="io-node io-in-1">
+          <div class="io-name">海量对话轨迹</div>
+          <div class="io-desc">无标签<br>无节点标注</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fnode n-purple">
+          <div class="fn-step"><span class="stepn">1</span><span class="fn-name">高方差样本挖掘</span><span class="fn-tag">SIMBA</span></div>
+          <div class="fn-desc">同任务多轨迹计算分数方差,锁定"时对时错"高价值任务,替代人工标注圈定淘金范围</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fnode n-purple">
+          <div class="fn-step"><span class="stepn">2</span><span class="fn-name">成败分叉点定位</span><span class="fn-tag">语义对齐</span></div>
+          <div class="fn-desc">成功/失败轨迹语义切片对齐,逐节点比对定位首个决策分歧点,缩小为关键分叉上下文</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fnode n-purple">
+          <div class="fn-step"><span class="stepn">3</span><span class="fn-name">因果归因反思</span><span class="fn-tag">GEPA</span></div>
+          <div class="fn-desc">LLM读取分叉上下文归纳成败因果证据,信息增益排序,压缩剥离无关噪声</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fnode n-purple">
+          <div class="fn-step"><span class="stepn">4</span><span class="fn-name">回放校准验证</span><span class="fn-tag">SkillOpt</span></div>
+          <div class="fn-desc">案例对在源任务克隆环境回放验证,过滤伪因果与有害样本,提炼即验证</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="io-node io-out-1">
+          <div class="io-name">可训练案例对</div>
+          <div class="io-desc">成功-失败对齐<br>精度可控</div>
+        </div>
+      </div>
+      <div class="sc-note">
+        <span class="pill">解决挑战①</span>
+        <span><b>无标注→自动归因:</b> 方差挖掘替代人工标注,分叉点对齐替代整轨迹对比,回放校准兜底精度 — 从泥沙里自动淘金</span>
+      </div>
+    </div>
+
+    <!-- ========== 方案2: 通用Skill多目标约束优化 ========== -->
+    <div class="scheme scheme-2">
+      <div class="sc-head">
+        <span class="sc-num">2</span>
+        <span class="sc-title">通用Skill多目标约束优化 — 防局部最优与旧题回退</span>
+        <span class="sc-ref">参考: <b>SkillOpt</b> LR限幅+留出集门控+慢更新 · <b>GEPA</b> 帕累托前沿维护</span>
+      </div>
+      <div class="sc-desc">
+        借鉴SkillOpt训练纪律:<b>LR限幅编辑防局部过拟合</b>,留出集全量回归门控防旧题回退,长度/分支密度硬约束嵌入验证,引导Skill帕累托进化。
+      </div>
+      <div class="flow">
+        <div class="io-node io-in-2">
+          <div class="io-name">案例对+当前Skill</div>
+          <div class="io-desc">方案1产出<br>驱动本轮编辑</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fnode n-amber">
+          <div class="fn-step"><span class="stepn">1</span><span class="fn-name">LR限幅有界编辑</span><span class="fn-tag">SkillOpt</span></div>
+          <div class="fn-desc">add/del/replace补丁聚合去冗,LR限制每步≤L条编辑,防有限样本"头痛医头"过度改写</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fnode n-amber">
+          <div class="fn-step"><span class="stepn">2</span><span class="fn-name">多维硬约束检查</span><span class="fn-tag">准入约束</span></div>
+          <div class="fn-desc">指令长度上限+逻辑分支密度阈值,超限补丁强制先del后add,源头防膨胀失控</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fnode n-amber">
+          <div class="fn-step"><span class="stepn">3</span><span class="fn-name">全量回归门控</span><span class="fn-tag">双门槛</span></div>
+          <div class="fn-desc">留出集新旧任务分层,须同时满足新任务增益+旧任务召回衰减≤门限,防旧题回退</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fnode n-amber">
+          <div class="fn-step"><span class="stepn">4</span><span class="fn-name">帕累托前沿维护</span><span class="fn-tag">GEPA</span></div>
+          <div class="fn-desc">成功率×长度×时延多目标维护非支配版本集,慢更新跨轮对比防遗忘</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="io-node io-out-2">
+          <div class="io-name">帕累托最优Skill</div>
+          <div class="io-desc">成功率↑长度受控<br>旧能力不回退</div>
+        </div>
+      </div>
+      <div class="sc-note">
+        <span class="pill">解决挑战②</span>
+        <span><b>长短期共同建模:</b> LR限幅防局部补丁过冲,旧任务回归门控防"按下葫芦浮起瓢",慢更新防遗忘 — 短期成功率与长期可维护性同时收敛</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ FOOTER ============ -->
+  <div class="foot">
+    <span><span class="key">一句话:</span>方案1从无标注轨迹自动提炼"成功-失败"案例对(方差挖掘→分叉定位→归因反思→回放校准),方案2以多目标硬约束+全量回归门控引导Skill帕累托进化(防局部最优·防旧题回退·防膨胀)</span>
+    <span>方案1产出案例对 → 驱动方案2优化闭环</span>
+  </div>
+</div>
+</body>
+</html>

@@ -138,10 +138,13 @@ def fmt_minibatch_trajectories(
     parts: list[str] = []
     for idx, item in enumerate(items, 1):
         tid = str(item["id"])
-        conv_path = os.path.join(prediction_dir, tid, "conversation.json")
+        # Rollout writes per-task dirs with filesystem-safe ids (on Windows a
+        # ':' in a path segment is illegal), so mirror that sanitisation here.
+        safe_tid = tid.replace(":", "-")
+        conv_path = os.path.join(prediction_dir, safe_tid, "conversation.json")
         if not os.path.exists(conv_path):
             continue
-        with open(conv_path) as f:
+        with open(conv_path, encoding="utf-8") as f:
             conversation = json.load(f)
         if not conversation:
             continue
@@ -167,9 +170,9 @@ def fmt_minibatch_trajectories(
         # ── Append target context (what the agent saw) ──────────────
         target_prompt = item.get("target_system_prompt", "")
         if not target_prompt:
-            prompt_path = os.path.join(prediction_dir, tid, "target_system_prompt.txt")
+            prompt_path = os.path.join(prediction_dir, safe_tid, "target_system_prompt.txt")
             if os.path.exists(prompt_path):
-                with open(prompt_path) as f:
+                with open(prompt_path, encoding="utf-8") as f:
                     target_prompt = f.read()
         if target_prompt:
             header += (
@@ -179,9 +182,9 @@ def fmt_minibatch_trajectories(
 
         user_prompt = item.get("target_user_prompt", "")
         if not user_prompt:
-            user_prompt_path = os.path.join(prediction_dir, tid, "target_user_prompt.txt")
+            user_prompt_path = os.path.join(prediction_dir, safe_tid, "target_user_prompt.txt")
             if os.path.exists(user_prompt_path):
-                with open(user_prompt_path) as f:
+                with open(user_prompt_path, encoding="utf-8") as f:
                     user_prompt = f.read()
         if user_prompt:
             header += (
@@ -192,9 +195,9 @@ def fmt_minibatch_trajectories(
         if os.environ.get("REFLACT_CODEX_TRACE_TO_OPTIMIZER", "0") == "1":
             codex_trace_summary = item.get("codex_trace_summary", "")
             if not codex_trace_summary:
-                codex_trace_summary_path = os.path.join(prediction_dir, tid, "codex_trace_summary.txt")
+                codex_trace_summary_path = os.path.join(prediction_dir, safe_tid, "codex_trace_summary.txt")
                 if os.path.exists(codex_trace_summary_path):
-                    with open(codex_trace_summary_path) as f:
+                    with open(codex_trace_summary_path, encoding="utf-8") as f:
                         codex_trace_summary = f.read()
             if codex_trace_summary:
                 header += (
@@ -211,9 +214,9 @@ def fmt_minibatch_trajectories(
 
         preview = item.get("spreadsheet_preview", "")
         if not preview:
-            preview_path = os.path.join(prediction_dir, tid, "spreadsheet_preview.txt")
+            preview_path = os.path.join(prediction_dir, safe_tid, "spreadsheet_preview.txt")
             if os.path.exists(preview_path):
-                with open(preview_path) as f:
+                with open(preview_path, encoding="utf-8") as f:
                     preview = f.read()
         if preview:
             header += (
@@ -266,6 +269,7 @@ def run_error_analyst_minibatch(
     meta_skill_context: str = "",
     update_mode: str = "patch",
     skill_aware_reflection: bool = False,
+    max_completion_tokens: int = 0,
 ) -> dict | None:
     """Analyze a minibatch of failed trajectories in one optimizer call.
 
@@ -333,7 +337,7 @@ def run_error_analyst_minibatch(
     try:
         response, _ = chat_optimizer(
             system=actual_system, user=user,
-            max_completion_tokens=64000 if is_full_rewrite_minibatch_mode(mode) else 16384,
+            max_completion_tokens=max_completion_tokens,
             retries=3,
             stage="analyst",
         )
@@ -376,6 +380,7 @@ def run_success_analyst_minibatch(
     update_mode: str = "patch",
     skill_aware_reflection: bool = False,
     emit_appendix_notes: bool = True,
+    max_completion_tokens: int = 0,
 ) -> dict | None:
     """Analyze a minibatch of successful trajectories in one optimizer call.
 
@@ -430,7 +435,7 @@ def run_success_analyst_minibatch(
     try:
         response, _ = chat_optimizer(
             system=actual_system, user=user,
-            max_completion_tokens=64000 if is_full_rewrite_minibatch_mode(mode) else 16384,
+            max_completion_tokens=max_completion_tokens,
             retries=3,
             stage="analyst",
         )
@@ -489,6 +494,7 @@ def run_minibatch_reflect(
     update_mode: str = "patch",
     skill_aware_reflection: bool | None = None,
     skill_aware_appendix_source: str | None = None,
+    max_completion_tokens: int = 0,
 ) -> list[dict | None]:
     """Full minibatch reflect stage: group → parallel optimizer calls → patches.
 
@@ -560,7 +566,7 @@ def run_minibatch_reflect(
     for idx, batch in enumerate(fail_batches):
         path = os.path.join(patches_dir, f"minibatch_fail_{idx:03d}.json")
         if os.path.exists(path):
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 raw_patches.append(json.load(f))
         else:
             pending_fail.append((idx, batch))
@@ -569,7 +575,7 @@ def run_minibatch_reflect(
     for idx, batch in enumerate(succ_batches):
         path = os.path.join(patches_dir, f"minibatch_succ_{idx:03d}.json")
         if os.path.exists(path):
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 raw_patches.append(json.load(f))
         else:
             pending_succ.append((idx, batch))
@@ -587,6 +593,7 @@ def run_minibatch_reflect(
             meta_skill_context=meta_skill_context,
             update_mode=update_mode,
             skill_aware_reflection=skill_aware_reflection,
+            max_completion_tokens=max_completion_tokens,
         )
         return f"minibatch_fail_{idx:03d}", patch
 
@@ -601,6 +608,7 @@ def run_minibatch_reflect(
             update_mode=update_mode,
             skill_aware_reflection=skill_aware_reflection,
             emit_appendix_notes=(skill_aware_appendix_source != "failure_only"),
+            max_completion_tokens=max_completion_tokens,
         )
         return f"minibatch_succ_{idx:03d}", patch
 
@@ -623,7 +631,7 @@ def run_minibatch_reflect(
             tag, patch = fut.result()
             if patch:
                 path = os.path.join(patches_dir, f"{tag}.json")
-                with open(path, "w") as f:
+                with open(path, "w", encoding="utf-8") as f:
                     json.dump(patch, f, ensure_ascii=False, indent=2)
                 raw_patches.append(patch)
             n_edits = len(get_payload_items(patch.get("patch", {}) if patch else {}, update_mode))

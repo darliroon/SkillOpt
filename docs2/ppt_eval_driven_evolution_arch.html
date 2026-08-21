@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Eval驱动学习自演进 — 技术方案架构图</title>
+<style>
+  @page { size: landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: #ffffff; color: #1f2937;
+  }
+  .slide {
+    width: 100vw; height: 100vh; min-height: 720px;
+    display: grid; grid-template-rows: auto 1fr auto;
+    padding: 10px 24px 8px;
+  }
+
+  /* ---------- Header ---------- */
+  .head { display: flex; align-items: baseline; gap: 14px; border-bottom: 2px solid #2563eb; padding-bottom: 6px; }
+  .head h1 { font-size: 22px; font-weight: 800; color: #0f1e3a; }
+  .head h1 .accent { color: #2563eb; }
+  .head h1 .arrow { color: #94a3b8; font-weight: 600; font-size: 19px; }
+  .head .sub { font-size: 12px; color: #64748b; margin-left: auto; }
+  .head .tag { font-size: 11px; background: #eff6ff; color: #2563eb; padding: 2px 10px; border-radius: 10px; font-weight: 600; border: 1px solid #bfdbfe; }
+
+  /* ---------- Body ---------- */
+  .body { padding-top: 8px; overflow: hidden; display: flex; flex-direction: column; gap: 6px; }
+
+  /* 关键技术要点 */
+  .key-points { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .kp { border-radius: 7px; padding: 6px 8px; border: 1px solid; border-top: 3px solid; }
+  .kp .kp-num { font-size: 10px; font-weight: 800; }
+  .kp .kp-title { font-size: 11px; font-weight: 800; margin: 1px 0 2px; }
+  .kp .kp-desc { font-size: 8.5px; line-height: 1.35; color: #475569; }
+  .kp-1 { border-color: #bfdbfe; border-top-color: #2563eb; background: #eff6ff; } .kp-1 .kp-num, .kp-1 .kp-title { color: #1d4ed8; }
+  .kp-2 { border-color: #ddd6fe; border-top-color: #7c3aed; background: #f5f3ff; } .kp-2 .kp-num, .kp-2 .kp-title { color: #6d28d9; }
+  .kp-3 { border-color: #fde68a; border-top-color: #b45309; background: #fffbeb; } .kp-3 .kp-num, .kp-3 .kp-title { color: #b45309; }
+  .kp-4 { border-color: #a7f3d0; border-top-color: #059669; background: #f0fdf4; } .kp-4 .kp-num, .kp-4 .kp-title { color: #047857; }
+  .kp-5 { border-color: #fecaca; border-top-color: #dc2626; background: #fef2f2; } .kp-5 .kp-num, .kp-5 .kp-title { color: #b91c1c; }
+
+  /* ---------- 架构图区域 ---------- */
+  .arch { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; overflow: hidden; }
+
+  /* 层标题 */
+  .layer-label { font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1px; }
+
+  /* 架构层 */
+  .arch-layer { border-radius: 7px; padding: 5px 8px; display: flex; flex-direction: column; gap: 3px; }
+  .al-title { font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+  .al-title .aln { color: #fff; width: 16px; height: 16px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0; }
+  .al-title .al-hint { font-size: 8.5px; color: #94a3b8; font-weight: 500; }
+  .al-title .al-solve { font-size: 8.5px; font-weight: 700; padding: 1px 6px; border-radius: 8px; flex-shrink: 0; margin-left: auto; }
+
+  /* 底座层 */
+  .layer-base { border: 1.5px solid #2563eb; background: linear-gradient(135deg, #eff6ff, #dbeafe); }
+  .layer-base .al-title { color: #1d4ed8; } .layer-base .aln { background: #2563eb; }
+  .layer-base .al-solve { background: #2563eb; color: #fff; }
+
+  /* 信号层 */
+  .layer-signal { border: 1.5px solid #7c3aed; background: linear-gradient(135deg, #f5f3ff, #ede9fe); }
+  .layer-signal .al-title { color: #6d28d9; } .layer-signal .aln { background: #7c3aed; }
+  .layer-signal .al-solve { background: #7c3aed; color: #fff; }
+
+  /* 进化层 */
+  .layer-evolve { border: 1.5px solid #b45309; background: linear-gradient(135deg, #fffbeb, #fef3c7); }
+  .layer-evolve .al-title { color: #b45309; } .layer-evolve .aln { background: #b45309; }
+  .layer-evolve .al-solve { background: #b45309; color: #fff; }
+
+  /* 精简部署层 */
+  .layer-deploy { border: 1.5px solid #059669; background: linear-gradient(135deg, #f0fdf4, #d1fae5); }
+  .layer-deploy .al-title { color: #047857; } .layer-deploy .aln { background: #059669; }
+  .layer-deploy .al-solve { background: #059669; color: #fff; }
+
+  /* 闭环层 */
+  .layer-loop { border: 1.5px solid #dc2626; background: linear-gradient(135deg, #fef2f2, #fee2e2); }
+  .layer-loop .al-title { color: #b91c1c; } .layer-loop .aln { background: #dc2626; }
+  .layer-loop .al-solve { background: #dc2626; color: #fff; }
+
+  /* 节点行 */
+  .node-row { display: flex; align-items: stretch; gap: 3px; }
+  .anode { flex: 1; border-radius: 5px; padding: 4px 6px; border: 1px solid; display: flex; flex-direction: column; gap: 1px; text-align: center; justify-content: center; }
+  .anode .an-name { font-size: 10px; font-weight: 700; }
+  .anode .an-desc { font-size: 8px; line-height: 1.25; }
+  .aarrow { display: flex; align-items: center; justify-content: center; font-size: 12px; color: #94a3b8; font-weight: 700; width: 12px; flex-shrink: 0; }
+
+  .n-blue { background: #eff6ff; border-color: #bfdbfe; } .n-blue .an-name { color: #1d4ed8; } .n-blue .an-desc { color: #1e3a5f; }
+  .n-purple { background: #f5f3ff; border-color: #ddd6fe; } .n-purple .an-name { color: #6d28d9; } .n-purple .an-desc { color: #3c1d7a; }
+  .n-amber { background: #fffbeb; border-color: #fde68a; } .n-amber .an-name { color: #b45309; } .n-amber .an-desc { color: #92400e; }
+  .n-green { background: #f0fdf4; border-color: #a7f3d0; } .n-green .an-name { color: #047857; } .n-green .an-desc { color: #064e36; }
+  .n-red { background: #fef2f2; border-color: #fecaca; } .n-red .an-name { color: #b91c1c; } .n-red .an-desc { color: #7f1d1d; }
+
+  /* 层间箭头 */
+  .inter-arrow { text-align: center; font-size: 11px; color: #94a3b8; font-weight: 700; line-height: 1; }
+  .inter-arrow .ia-note { font-size: 8px; color: #94a3b8; font-weight: 500; font-style: italic; }
+
+  /* 底座强调 */
+  .base-banner { font-size: 8.5px; color: #1e3a5f; text-align: center; font-weight: 600; margin-top: 1px; }
+
+  /* 闭环条 */
+  .loop-bar { font-size: 9px; color: #7f1d1d; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+  .loop-bar .lb-icon { font-size: 14px; color: #dc2626; font-weight: 800; flex-shrink: 0; }
+  .loop-bar b { color: #b91c1c; }
+
+  /* 侧边标注 */
+  .side-note { font-size: 8px; color: #64748b; font-style: italic; }
+
+  .foot { border-top: 1px solid #e2e8f0; padding-top: 5px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; }
+  .foot .key { color: #b45309; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ============ HEADER ============ -->
+  <div class="head">
+    <h1>Eval驱动学习自演进 <span class="arrow">|</span> <span class="accent">以Eval为底座构建Skill自动进化体系</span></h1>
+    <span class="tag">技术方案架构图</span>
+    <span class="sub">Eval底座 × 对比因果提纯 × Reflect-Edit-Validate × 精简部署 × 闭环反馈</span>
+  </div>
+
+  <div class="body">
+
+    <!-- ====== 5个关键技术要点 ====== -->
+    <div class="key-points">
+      <div class="kp kp-1">
+        <div class="kp-num">① Eval任务合成</div>
+        <div class="kp-title">合成千级任务铺满能力空间</div>
+        <div class="kp-desc">基于能力画像LLM合成多维度Eval任务,不依赖线上触发即可提供充足进化信号</div>
+      </div>
+      <div class="kp kp-2">
+        <div class="kp-num">② 对比因果提纯</div>
+        <div class="kp-title">成功/失败对比提取因果证据</div>
+        <div class="kp-desc">多温度采样产生对比对,提取分叉点关键证据,回放校准过滤有害补丁</div>
+      </div>
+      <div class="kp kp-3">
+        <div class="kp-num">③ Reflect-Edit-Validate</div>
+        <div class="kp-title">留出集门控确保单调增益</div>
+        <div class="kp-desc">Reflect归纳→add/del/replace编辑→留出集严格门控,每轮只保留有增益补丁</div>
+      </div>
+      <div class="kp kp-4">
+        <div class="kp-num">④ 精简控长防遗忘</div>
+        <div class="kp-title">del删冗余+慢更新防遗忘</div>
+        <div class="kp-desc">del主动控长防膨胀,慢更新防跨轮灾难性遗忘,元技能累积编辑策略</div>
+      </div>
+      <div class="kp kp-5">
+        <div class="kp-num">⑤ 结构化部署闭环</div>
+        <div class="kp-title">分类学切片+拓扑路由+反馈</div>
+        <div class="kp-desc">核心常驻/非核心按需,拓扑路由只载子集,线上反馈回流驱动下一轮</div>
+      </div>
+    </div>
+
+    <!-- ====== 架构图 ====== -->
+    <div class="arch">
+
+      <!-- Layer 0: Eval底座 -->
+      <div class="arch-layer layer-base">
+        <div class="al-title">
+          <span class="aln">0</span>Eval 底座 — 能力画像 × 任务合成 × 评测执行
+          <span class="al-solve">底座: 提供进化信号源</span>
+        </div>
+        <div class="node-row">
+          <div class="anode n-blue">
+            <div class="an-name">Skill 能力画像</div>
+            <div class="an-desc">当前能力边界<br>弱点/覆盖盲区</div>
+          </div>
+          <div class="aarrow">→</div>
+          <div class="anode n-blue">
+            <div class="an-name">Eval 任务合成</div>
+            <div class="an-desc">LLM 合成千级<br>多维度任务变体</div>
+          </div>
+          <div class="aarrow">→</div>
+          <div class="anode n-blue">
+            <div class="an-name">评测集构造</div>
+            <div class="an-desc">训练集 + 留出集<br>分层覆盖能力空间</div>
+          </div>
+          <div class="aarrow">→</div>
+          <div class="anode n-blue">
+            <div class="an-name">批量执行采集</div>
+            <div class="an-desc">多温度采样<br>收集轨迹+分数</div>
+          </div>
+        </div>
+        <div class="base-banner">📌 Eval 是整个自演进体系的底座 — 所有进化信号、门控判定、质量保证均由 Eval 驱动</div>
+      </div>
+
+      <div class="inter-arrow">↓ <span class="ia-note">原始执行数据 → 信号提纯</span></div>
+
+      <!-- Layer 1: 信号提纯 -->
+      <div class="arch-layer layer-signal">
+        <div class="al-title">
+          <span class="aln">1</span>对比因果信号提纯 — 从噪声数据中提取高信号进化证据
+          <span class="al-solve">解决: 信号质量</span>
+          <span class="al-hint">不依赖人工标注</span>
+        </div>
+        <div class="node-row">
+          <div class="anode n-purple">
+            <div class="an-name">成功/失败对比对</div>
+            <div class="an-desc">同任务多温度<br>分叉出对比样本</div>
+          </div>
+          <div class="aarrow">→</div>
+          <div class="anode n-purple">
+            <div class="an-name">因果关键证据</div>
+            <div class="an-desc">定位分叉点<br>提取决定性差异</div>
+          </div>
+          <div class="aarrow">→</div>
+          <div class="anode n-purple">
+            <div class="an-name">补丁回放校准</div>
+            <div class="an-desc">源任务克隆回放<br>过滤有害补丁</div>
+          </div>
+          <div class="aarrow">→</div>
+          <div class="anode n-purple">
+            <div class="an-name">高信号证据集</div>
+            <div class="an-desc">高质量进化信号<br>喂入进化循环</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="inter-arrow">↓ <span class="ia-note">高信号证据 → 进入核心进化循环</span></div>
+
+      <!-- Layer 2: 进化核心循环 -->
+      <div class="arch-layer layer-evolve">
+        <div class="al-title">
+          <span class="aln">2</span>自演进核心循环 — Reflect × Edit × Validate 极致丰富
+          <span class="al-solve">解决: 快速丰富提正确率</span>
+          <span class="al-hint">广义自演进范式 · 非梯度下降</span>
+        </div>
+        <div class="node-row">
+          <div class="anode n-amber">
+            <div class="an-name">Reflect 归纳</div>
+            <div class="an-desc">失败共性归纳<br>产出丰富补丁候选</div>
+          </div>
+          <div class="aarrow">→</div>
+          <div class="anode n-amber">
+            <div class="an-name">Edit 编辑</div>
+            <div class="an-desc">add/del/replace<br>LR裁剪+聚合合并</div>
+          </div>
+          <div class="aarrow">→</div>
+          <div class="anode n-amber">
+            <div class="an-name">Validate 门控</div>
+            <div class="an-desc">留出集严格验证<br>单调增益才通过</div>
+          </div>
+          <div class="aarrow">→</div>
+          <div class="anode n-amber">
+            <div class="an-name">精简控长</div>
+            <div class="an-desc">del删冗余防膨胀<br>慢更新防遗忘</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;font-size:8.5px;">
+          <span style="background:#fefce8;border:1px solid #fde68a;border-radius:4px;padding:2px 7px;color:#92400e;"><b>Epoch边界:</b> 🌀慢更新防跨轮遗忘</span>
+          <span style="background:#fefce8;border:1px solid #fde68a;border-radius:4px;padding:2px 7px;color:#92400e;">🧠元技能: 累积"哪些编辑有效"策略记忆</span>
+          <span style="background:#fefce8;border:1px solid #fde68a;border-radius:4px;padding:2px 7px;color:#92400e;">⤴被拒补丁进缓冲区下轮复用</span>
+        </div>
+      </div>
+
+      <div class="inter-arrow">↓ <span class="ia-note">产出 best_skill.md (300–2000 token) → 精简部署</span></div>
+
+      <!-- Layer 3: 精简部署 -->
+      <div class="arch-layer layer-deploy">
+        <div class="al-title">
+          <span class="aln">3</span>结构化精简与按需部署 — 丰富而不膨胀
+          <span class="al-solve">解决: Token膨胀 + 时延</span>
+          <span class="al-hint">分类学切片 + 拓扑路由</span>
+        </div>
+        <div class="node-row">
+          <div class="anode n-green">
+            <div class="an-name">分类学切片</div>
+            <div class="an-desc">核心常驻/非核心按需<br>去膨胀</div>
+          </div>
+          <div class="aarrow">→</div>
+          <div class="anode n-green">
+            <div class="an-name">拓扑化拆分</div>
+            <div class="an-desc">domain→type→instance<br>能力节点拓扑</div>
+          </div>
+          <div class="aarrow">→</div>
+          <div class="anode n-green">
+            <div class="an-name">忠实性校验</div>
+            <div class="an-desc">压缩后回放验证<br>不丢功能覆盖</div>
+          </div>
+          <div class="aarrow">→</div>
+          <div class="anode n-green">
+            <div class="an-name">按需加载部署</div>
+            <div class="an-desc">拓扑路由只载子集<br>~100 token/次</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="inter-arrow">↓ <span class="ia-note">线上执行 → 反馈回流闭环</span></div>
+
+      <!-- Layer 4: 闭环反馈 -->
+      <div class="arch-layer layer-loop">
+        <div class="al-title">
+          <span class="aln">4</span>反馈闭环 — 线上数据回流驱动持续进化
+          <span class="al-solve">解决: 持续进化</span>
+          <span class="al-hint">闭环 · 非一次性管道</span>
+        </div>
+        <div class="loop-bar">
+          <span class="lb-icon">⟲</span>
+          <span><b>反馈闭环:</b> 线上执行轨迹+结果 → 回流 Eval 底座(Phase 0) → 发现新边界case / 正确率不足 → 触发下一轮 Reflect-Edit-Validate 进化 → <b>持续递进优化,非一次性训练</b></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ FOOTER ============ -->
+  <div class="foot">
+    <span><span class="key">一句话:</span>以Eval为底座 → 合成任务铺满空间 → 对比因果提纯高信号 → Reflect-Edit-Validate极致丰富(门控保单调增益) → 精简部署(分类学切片+拓扑路由) → 线上反馈闭环驱动持续进化</span>
+    <span>产物: best_skill.md · 300–2000 token · 零额外推理调用</span>
+  </div>
+</div>
+</body>
+</html>

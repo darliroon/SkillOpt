@@ -28,6 +28,7 @@ def rank_and_select(
     max_edits: int,
     meta_skill_context: str = "",
     update_mode: str = "patch",
+    max_completion_tokens: int = 0,
 ) -> dict:
     """Use a optimizer LLM to rank edits by importance, then keep top-L.
 
@@ -74,7 +75,7 @@ def rank_and_select(
     try:
         response, _ = chat_optimizer(
             system=load_prompt(prompt_name), user=user,
-            max_completion_tokens=16384, retries=3, stage="ranking",
+            max_completion_tokens=max_completion_tokens, retries=3, stage="ranking",
         )
         result = extract_json(response)
         if result and "selected_indices" in result:

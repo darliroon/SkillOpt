@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>SkillOpt:技能自演进(上下结构)</title>
+<style>
+  @page { size: landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: #ffffff; color: #1f2937;
+  }
+  .slide {
+    width: 100vw; height: 100vh; min-height: 720px;
+    display: grid; grid-template-rows: auto 1fr auto;
+    padding: 10px 24px 8px;
+  }
+  /* ---------- Header ---------- */
+  .head { display: flex; align-items: baseline; gap: 14px; border-bottom: 2px solid #2563eb; padding-bottom: 6px; }
+  .head h1 { font-size: 24px; font-weight: 800; color: #0f1e3a; }
+  .head h1 .accent { color: #2563eb; }
+  .head .sub { font-size: 12px; color: #64748b; margin-left: auto; }
+  .head .tag { font-size: 11px; background: #eff6ff; color: #2563eb; padding: 2px 10px; border-radius: 10px; font-weight: 600; border: 1px solid #bfdbfe; }
+
+  /* ---------- Body: 上下两栏 ---------- */
+  .body { display: grid; grid-template-rows: 0.95fr 1.05fr; gap: 8px; padding-top: 7px; overflow: hidden; }
+  .section { display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+  .sec-title { font-size: 13px; font-weight: 700; color: #b45309; display: flex; align-items: center; gap: 8px; }
+  .sec-title .num { background: #b45309; color: #fff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+
+  .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 12px; }
+  .card h3 { font-size: 12.5px; color: #1d4ed8; margin-bottom: 4px; font-weight: 700; }
+
+  /* ---- 上半:宏观方案 内部左右分 ---- */
+  .top-inner { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 10px; flex: 1; overflow: hidden; }
+
+  /* DL 类比 strip */
+  .analogy { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px 6px; font-size: 11px; line-height: 1.45; }
+  .analogy .hd { grid-column: 1/-1; font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; padding-bottom: 2px; border-bottom: 1px solid #e2e8f0; margin-bottom: 1px; }
+  .analogy .pair { display: flex; align-items: center; gap: 3px; }
+  .analogy .dl { color: #475569; }
+  .analogy .arr { color: #94a3b8; font-size: 9px; }
+  .analogy .so { color: #1d4ed8; font-weight: 600; }
+
+  /* 6 阶段横向卡片 */
+  .stage-row { display: flex; gap: 5px; align-items: stretch; }
+  .scard {
+    flex: 1; border: 1px solid #e2e8f0; border-top: 3px solid; border-radius: 5px;
+    padding: 5px 7px; display: flex; flex-direction: column; gap: 2px; background: #fff;
+  }
+  .scard .sh { font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+  .scard .si { font-size: 14px; }
+  .scard .sd { font-size: 10px; color: #475569; line-height: 1.35; flex: 1; }
+  .scard .sio { font-size: 9px; color: #64748b; font-family: Consolas, monospace; line-height: 1.25; }
+  .scard .sio b { color: #0f766e; }
+  .sc1 { border-top-color: #2563eb; } .sc1 .sh { color: #2563eb; }
+  .sc2 { border-top-color: #b45309; } .sc2 .sh { color: #b45309; }
+  .sc3 { border-top-color: #059669; } .sc3 .sh { color: #059669; }
+  .sc4 { border-top-color: #7c3aed; } .sc4 .sh { color: #7c3aed; }
+  .sc5 { border-top-color: #dc2626; } .sc5 .sh { color: #dc2626; }
+  .sc6 { border-top-color: #059669; } .sc6 .sh { color: #059669; }
+
+  .epoch-note { background: linear-gradient(90deg, #eff6ff, #dbeafe); border: 1px dashed #2563eb; border-radius: 5px; padding: 4px 9px; font-size: 10px; color: #1e3a5f; display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .epoch-note b { color: #b45309; }
+
+  /* ---- 下半:流程示例 ---- */
+  .flow-row { display: flex; gap: 5px; align-items: stretch; }
+  .fcard { flex: 1; border-radius: 6px; padding: 6px 8px; border: 1px solid; display: flex; flex-direction: column; gap: 2px; }
+  .fcard .fh { display: flex; align-items: center; gap: 5px; }
+  .fcard .fnum { font-size: 10px; font-weight: 800; color: #fff; width: 17px; height: 17px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .fcard .ftitle { font-size: 11.5px; font-weight: 700; }
+  .fcard .fdesc { font-size: 10px; line-height: 1.4; color: #475569; flex: 1; }
+  .farrow { align-self: center; color: #94a3b8; font-size: 14px; font-weight: 700; }
+  .fc1 { border-color: #bfdbfe; background: #f0f7ff; } .fc1 .fnum { background: #2563eb; } .fc1 .ftitle { color: #1d4ed8; }
+  .fc2 { border-color: #fde68a; background: #fffbeb; } .fc2 .fnum { background: #b45309; } .fc2 .ftitle { color: #b45309; }
+  .fc3 { border-color: #a7f3d0; background: #f0fdf4; } .fc3 .fnum { background: #059669; } .fc3 .ftitle { color: #059669; }
+  .fc4 { border-color: #fecaca; background: #fef2f2; } .fc4 .fnum { background: #dc2626; } .fc4 .ftitle { color: #dc2626; }
+  .fc5 { border-color: #a7f3d0; background: #f0fdf4; } .fc5 .fnum { background: #059669; } .fc5 .ftitle { color: #059669; }
+
+  /* 前后对比 */
+  .ba { display: grid; grid-template-columns: 1fr 50px 1.2fr; gap: 0; align-items: stretch; flex: 1; }
+  .ba-col { border-radius: 7px; padding: 7px 10px; border: 1px solid; }
+  .ba-before { background: #f1f5f9; border-color: #cbd5e1; }
+  .ba-after { background: #f0fdf4; border-color: #86efac; }
+  .ba-col .lab { font-size: 11px; font-weight: 800; margin-bottom: 4px; }
+  .ba-before .lab { color: #64748b; }
+  .ba-after .lab { color: #059669; }
+  .ba-arrow { display: flex; align-items: center; justify-content: center; font-size: 24px; color: #2563eb; font-weight: 700; }
+  .doc { font-family: Consolas, monospace; font-size: 11px; line-height: 1.5; }
+  .doc .h1 { font-weight: 700; font-size: 12px; }
+  .doc .empty { color: #94a3b8; font-style: italic; }
+  .doc .new { color: #059669; font-weight: 600; }
+  .doc .mk { color: #b45309; font-weight: 700; }
+  .doc .hint { color: #94a3b8; font-size: 10px; margin-top: 4px; }
+  .doc .hint.g { color: #059669; }
+
+  .footer-note { background: #fefce8; border: 1px solid #fde68a; border-radius: 5px; padding: 4px 10px; font-size: 10px; color: #92400e; }
+  .foot { border-top: 1px solid #e2e8f0; padding-top: 5px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; }
+  .foot .key { color: #b45309; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ============ HEADER ============ -->
+  <div class="head">
+    <h1>SkillOpt <span class="accent">| 技能自演进</span> — 把 Markdown 技能当「权重」训练</h1>
+    <span class="tag">技能自演进维度洞察</span>
+    <span class="sub">不碰模型权重 · 零额外推理调用 · 部署即一份 best_skill.md</span>
+  </div>
+
+  <!-- ============ BODY: 上下结构 ============ -->
+  <div class="body">
+
+    <!-- ========== 上半:宏观方案 ========== -->
+    <div class="section">
+      <div class="sec-title"><span class="num">A</span>宏观方案:技能即权重,像训神经网络一样训技能</div>
+      <div class="top-inner">
+        <!-- 左:DL 类比 strip -->
+        <div class="card" style="display:flex;flex-direction:column;">
+          <h3>① 核心洞察:DL ↔ SkillOpt 完全同构</h3>
+          <div class="analogy">
+            <div class="hd">深度学习概念 → SkillOpt 对应</div>
+            <div class="pair"><span class="dl">模型权重</span><span class="arr">→</span><span class="so">技能文档(MD)</span></div>
+            <div class="pair"><span class="dl">前向传播</span><span class="arr">→</span><span class="so">Rollout 执行</span></div>
+            <div class="pair"><span class="dl">损失函数</span><span class="arr">→</span><span class="so">评估器打分</span></div>
+            <div class="pair"><span class="dl">反向传播</span><span class="arr">→</span><span class="so">Reflect 反思</span></div>
+            <div class="pair"><span class="dl">梯度</span><span class="arr">→</span><span class="so">编辑补丁</span></div>
+            <div class="pair"><span class="dl">梯度聚合</span><span class="arr">→</span><span class="so">补丁合并</span></div>
+            <div class="pair"><span class="dl">梯度裁剪</span><span class="arr">→</span><span class="so">Top-L 选择</span></div>
+            <div class="pair"><span class="dl">学习率</span><span class="arr">→</span><span class="so">最大编辑数</span></div>
+            <div class="pair"><span class="dl">SGD step</span><span class="arr">→</span><span class="so">应用补丁</span></div>
+            <div class="pair"><span class="dl">验证早停</span><span class="arr">→</span><span class="so">门控接受</span></div>
+            <div class="pair"><span class="dl">动量</span><span class="arr">→</span><span class="so">慢更新</span></div>
+            <div class="pair"><span class="dl">元学习</span><span class="arr">→</span><span class="so">元技能</span></div>
+          </div>
+        </div>
+        <!-- 右:6 阶段横向卡片 -->
+        <div class="card" style="display:flex;flex-direction:column;">
+          <h3>② 六阶段自演进闭环 — 每步做什么、输入→输出</h3>
+          <div class="stage-row" style="flex:1;">
+            <div class="scard sc1">
+              <div class="sh"><span class="si">▶</span> Rollout</div>
+              <div class="sd">模型用<b>当前技能</b>执行任务,产出轨迹+分数(=前向传播)</div>
+              <div class="sio">技能+任务 → <b>轨迹+分数</b></div>
+            </div>
+            <div class="scard sc2">
+              <div class="sh"><span class="si">⟲</span> Reflect</div>
+              <div class="sd">优化器分析 minibatch(8条)轨迹,识别<b>共性模式</b>,产出编辑补丁(=反向传播)</div>
+              <div class="sio">轨迹+技能 → <b>编辑补丁</b></div>
+            </div>
+            <div class="scard sc3">
+              <div class="sh"><span class="si">⇄</span> Aggregate</div>
+              <div class="sd">语义相似补丁<b>层级化合并</b>去冗余;失败补丁优先于成功补丁</div>
+              <div class="sio">多组补丁 → <b>一条合并补丁</b></div>
+            </div>
+            <div class="scard sc4">
+              <div class="sh"><span class="si">✂</span> Select</div>
+              <div class="sd">按影响/互补/通用性排序,<b>学习率 LR</b> 限制每步最多 L 条(=梯度裁剪)</div>
+              <div class="sio">合并补丁 → <b>Top-L 编辑</b></div>
+            </div>
+            <div class="scard sc5">
+              <div class="sh"><span class="si">✎</span> Update</div>
+              <div class="sd">选中编辑按 op(append/del/replace)<b>应用到技能</b>,产出新版本(=SGD step)</div>
+              <div class="sio">旧技能+编辑 → <b>新技能</b></div>
+            </div>
+            <div class="scard sc6">
+              <div class="sh"><span class="si">✓</span> Gate</div>
+              <div class="sd">新技能在<b>留出验证集</b>评估,严格优于当前才接受;否则回滚进缓冲区</div>
+              <div class="sio">新技能 → <b>接受/拒绝</b></div>
+            </div>
+          </div>
+          <div class="epoch-note">
+            <b>Epoch 边界(跨轮次):</b> 🌀 <b>慢更新</b>(=动量)纵向对比两版技能防灾难性遗忘 | 🧠 <b>元技能</b>(=元学习)累积"哪些编辑有效/有害"的优化器策略记忆
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 下半:流程示例 ========== -->
+    <div class="section">
+      <div class="sec-title"><span class="num">B</span>流程示例:SearchQA 一个自演进步的完整解剖</div>
+      <!-- 横向 5 卡片 -->
+      <div class="flow-row">
+        <div class="fcard fc1">
+          <div class="fh"><div class="fnum">1</div><div class="ftitle">Rollout</div></div>
+          <div class="fdesc">模型用<b>空白技能</b>跑一批任务,3 题答错:<br>• "他的第三任妻子是江青"→答"江青"(❌应为毛泽东)<br>• "Lake Okeechobee"→答"Okeechobee"(❌漏词)<br>• "include X,Y"→答了 X 而非父类(❌)</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fcard fc2">
+          <div class="fh"><div class="fnum">2</div><div class="ftitle">Reflect</div></div>
+          <div class="fdesc">优化器分析失败 minibatch,归纳共性模式,产出<b>文本梯度</b>:<br>• 补丁1:逆向关系应答丈夫<br>• 补丁2:保留 Lake/River 词<br>• 补丁3:include 列举→答父类</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fcard fc3">
+          <div class="fh"><div class="fnum">3</div><div class="ftitle">聚合+选择</div></div>
+          <div class="fdesc">3 条补丁语义不重叠→全保留;若重复则合并取最佳措辞;失败优先于成功;按 LR=4 裁剪取 <b>Top-3</b></div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fcard fc4">
+          <div class="fh"><div class="fnum">4</div><div class="ftitle">Update</div></div>
+          <div class="fdesc">应用补丁→技能从空白长出真实规则<br>(见下方前后对比)</div>
+        </div>
+        <div class="farrow">→</div>
+        <div class="fcard fc5">
+          <div class="fh"><div class="fnum">5</div><div class="ftitle">Gate</div></div>
+          <div class="fdesc">留出验证:0.62 &gt; 0.55 → <b>接受 ✓</b><br>否则回滚,补丁进缓冲区下轮复用</div>
+        </div>
+      </div>
+      <!-- 前后对比 -->
+      <div class="ba">
+        <div class="ba-col ba-before">
+          <div class="lab">⬛ 演进前 — 种子技能(空白)</div>
+          <div class="doc">
+            <div class="h1"># Question Answering Skill</div>
+            <div class="empty">(No learned rules yet. Rules will be<br>added through the reflection process.)</div>
+            <div class="hint">↳ 仅一个标题 + 一句占位<br>↳ 模型没有任何行为指导</div>
+          </div>
+        </div>
+        <div class="ba-arrow">⇒</div>
+        <div class="ba-col ba-after">
+          <div class="lab">✅ 演进后 — 训练产出(gpt5.5_skill.md)</div>
+          <div class="doc">
+            <div class="h1"># Question Answering Skill</div>
+            <div class="mk">## Common Clue Traps</div>
+            <div class="new">- 注意逆向关系:"His third wife was Jiang Qing"→答丈夫</div>
+            <div class="new">- "include/like/such as"列实体→应答父类</div>
+            <div class="mk">## Concise Answer Normalization</div>
+            <div class="new">- 自然地理特征保留 Lake/River/Bay/Mount 词</div>
+            <div class="new">- 公司名省略 Company/Inc.,保留 surface form</div>
+            <div class="mk">## Clue Interpretation</div>
+            <div class="new">- Jeopardy 式措辞推断答案类型,修饰语当硬过滤</div>
+            <div class="hint g">↳ 6 章节、数千字结构化策略 · 全部由优化器从轨迹归纳+门控验证后写入</div>
+          </div>
+        </div>
+      </div>
+      <div class="footer-note"><b>关键:</b>一步循环 = Rollout→Reflect→聚合→选择→Update→Gate;多轮后空白种子长成 6 章节策略。Epoch 间用慢更新防遗忘、元技能累积优化器记忆。整个过程<b>不碰模型权重</b>,只改这一份 Markdown。</div>
+    </div>
+
+  </div><!-- /body -->
+
+  <!-- ============ FOOTER ============ -->
+  <div class="foot">
+    <div><span class="key">一句话:</span>把 Markdown 当权重,用文本梯度(编辑补丁)在留出集门控下迭代更新;Epoch 间用慢更新防遗忘、元技能累积优化器记忆 → 产出一个紧凑、可跨模型迁移、零额外调用的 best_skill.md</div>
+    <div>SkillOpt · arXiv:2605.23904 · 微软研究院</div>
+  </div>
+
+</div>
+</body>
+</html>

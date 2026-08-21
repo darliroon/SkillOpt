@@ -1,6 +1,7 @@
 _base_: ../_base_/default.yaml
 
 train:
+  num_epochs: 8
   train_size: 0
   batch_size: 40
   accumulation: 1
@@ -13,9 +14,11 @@ env:
   data_path: ""
   split_output_dir: ""
   max_turns: 1
+
+  # Rollout阶段 chat_target()调用-Target模型答题时的输出token上限
   max_completion_tokens: 16384
   exec_timeout: 300
-  workers: 64
+  workers: 16
   limit: 0
   shuffle_choices: true
   use_theorem: false

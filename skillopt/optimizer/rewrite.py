@@ -17,7 +17,7 @@ def rewrite_skill_from_suggestions(
     step_buffer_context: str = "",
     env: str | None = None,
     reasoning_effort: str | None = "high",
-    max_completion_tokens: int = 64000,
+    max_completion_tokens: int = 0,
 ) -> dict | None:
     suggestions = get_payload_items(patch, "rewrite_from_suggestions")
     if not suggestions:

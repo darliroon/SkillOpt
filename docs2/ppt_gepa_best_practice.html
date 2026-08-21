@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Eval驱动Skill自演进 — 业界最优方案：GEPA 及其产品级工程实践</title>
+<style>
+  @page { size: landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: #ffffff; color: #1f2937;
+  }
+  .slide {
+    width: 100vw; height: 100vh; min-height: 720px;
+    display: grid; grid-template-rows: auto 1fr auto;
+    padding: 10px 24px 8px;
+  }
+  /* ---------- Header ---------- */
+  .head { display: flex; align-items: baseline; gap: 14px; border-bottom: 2px solid #2563eb; padding-bottom: 6px; }
+  .head h1 { font-size: 22px; font-weight: 800; color: #0f1e3a; }
+  .head h1 .accent { color: #2563eb; }
+  .head h1 .arrow { color: #94a3b8; font-weight: 600; font-size: 19px; }
+  .head .tag { font-size: 11px; background: #eff6ff; color: #2563eb; padding: 2px 10px; border-radius: 10px; font-weight: 600; border: 1px solid #bfdbfe; }
+  .head .sub { font-size: 11px; color: #64748b; margin-left: auto; }
+
+  /* ---------- Body ---------- */
+  .body { display: grid; grid-template-columns: 1fr 1.05fr; gap: 12px; padding-top: 8px; overflow: hidden; }
+  .col { display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+
+  .sec-title { font-size: 13px; font-weight: 700; color: #b45309; display: flex; align-items: center; gap: 8px; }
+  .sec-title .num { background: #b45309; color: #fff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+  .sec-title .hint { font-size: 9.5px; color: #94a3b8; font-weight: 500; }
+
+  .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 10px; }
+
+  /* ---- 方案对比表 ---- */
+  .cmp-table { width: 100%; border-collapse: collapse; }
+  .cmp-table th { font-size: 9.5px; color: #64748b; font-weight: 700; text-align: left; padding: 3px 6px; border-bottom: 1.5px solid #cbd5e1; }
+  .cmp-table td { font-size: 9.5px; color: #475569; padding: 4px 6px; border-bottom: 1px solid #e2e8f0; line-height: 1.35; vertical-align: top; }
+  .cmp-table .mname { font-weight: 800; white-space: nowrap; }
+  .cmp-table tr.hl { background: linear-gradient(90deg, #f0fdf4, #ecfdf5); }
+  .cmp-table tr.hl td { border-bottom: 1.5px solid #86efac; }
+  .m-so { color: #2563eb; } .m-si { color: #7c3aed; } .m-ge { color: #059669; }
+  .cmp-table .lack { color: #b91c1c; font-size: 9px; }
+  .winner-badge { display: inline-block; background: #059669; color: #fff; font-size: 8.5px; font-weight: 800; padding: 1px 6px; border-radius: 8px; margin-left: 4px; }
+
+  /* ---- 战绩数据条 ---- */
+  .stats { display: flex; gap: 5px; }
+  .stat { flex: 1; border-radius: 6px; border: 1px solid #a7f3d0; background: #f0fdf4; text-align: center; padding: 5px 3px; display: flex; flex-direction: column; gap: 1px; }
+  .stat .v { font-size: 15px; font-weight: 800; color: #047857; }
+  .stat .k { font-size: 8.5px; color: #065f46; line-height: 1.25; }
+
+  /* ---- 为什么最强 ---- */
+  .why-list { display: flex; flex-direction: column; gap: 4px; }
+  .wcard { border: 1px solid #e2e8f0; border-left: 3px solid; border-radius: 5px; padding: 5px 8px; background: #fff; }
+  .wcard .wh { display: flex; align-items: baseline; gap: 6px; }
+  .wcard .wname { font-size: 11px; font-weight: 800; }
+  .wcard .wtag { font-size: 8.5px; color: #94a3b8; margin-left: auto; font-style: italic; }
+  .wcard .wdesc { font-size: 9.5px; color: #475569; line-height: 1.4; margin-top: 1px; }
+  .wcard .wdesc b { color: #0f1e3a; }
+  .w1 { border-left-color: #2563eb; } .w1 .wname { color: #1d4ed8; }
+  .w2 { border-left-color: #7c3aed; } .w2 .wname { color: #6d28d9; }
+  .w3 { border-left-color: #b45309; } .w3 .wname { color: #b45309; }
+
+  /* ---- 产品实践 ---- */
+  .prac-list { display: flex; flex-direction: column; gap: 4px; }
+  .pcard { border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 9px; background: #fff; display: flex; gap: 8px; align-items: flex-start; }
+  .pcard .pco { flex-shrink: 0; width: 76px; font-size: 10.5px; font-weight: 800; padding-top: 1px; }
+  .pcard .pbody { flex: 1; }
+  .pcard .pwhat { font-size: 9.5px; color: #475569; line-height: 1.35; }
+  .pcard .pnum { font-size: 9px; font-weight: 700; color: #047857; margin-top: 1px; }
+  .pc1 .pco { color: #dc2626; }
+  .pc2 .pco { color: #2563eb; }
+  .pc3 .pco { color: #059669; }
+  .pc4 .pco { color: #7c3aed; }
+
+  .eco-note { background: #fefce8; border: 1px solid #fde68a; border-radius: 5px; padding: 4px 9px; font-size: 9px; color: #92400e; line-height: 1.4; }
+  .eco-note b { color: #b45309; }
+
+  /* ---- 收口 ---- */
+  .fusion { border: 1.5px dashed #dc2626; border-radius: 6px; padding: 5px 10px; background: linear-gradient(90deg, #fef2f2, #fffbeb, #f0fdf4); font-size: 10px; color: #7f1d1d; line-height: 1.45; }
+  .fusion b { color: #b91c1c; }
+  .fusion .fu-t { color: #047857; }
+
+  .foot { border-top: 1px solid #e2e8f0; padding-top: 5px; display: flex; justify-content: space-between; font-size: 9.5px; color: #94a3b8; }
+  .foot .key { color: #b45309; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ============ Header ============ -->
+  <div class="head">
+    <h1>Eval驱动Skill自演进 <span class="arrow">—</span> <span class="accent">业界最优方案：GEPA</span> 及其产品级工程实践</h1>
+    <span class="tag">ICLR 2026 Oral · Berkeley</span>
+    <span class="sub">反思进化 + 帕累托前沿 · 已进入 Databricks / Dropbox / OpenAI 生产管线</span>
+  </div>
+
+  <!-- ============ Body ============ -->
+  <div class="body">
+
+    <!-- ======== 左列：方案对比 + 为什么最强 ======== -->
+    <div class="col">
+
+      <div class="sec-title"><span class="num">1</span>什么方案做的最好 <span class="hint">— 三类思路横评，业界收敛于 GEPA 式反思进化</span></div>
+      <div class="card">
+        <table class="cmp-table">
+          <tr><th>方案</th><th>核心机制</th><th>短板</th></tr>
+          <tr>
+            <td class="mname m-so">梯度下降<br>SkillOpt</td>
+            <td>单轨迹有界编辑 + 门控，训练纪律完备、稳定不退化</td>
+            <td class="lack">单点爬坡易陷局部最优；学术单场景验证</td>
+          </tr>
+          <tr>
+            <td class="mname m-si">强化探索<br>DSPy/SIMBA</td>
+            <td>方差采样选高价值批次，爬山贪心保留</td>
+            <td class="lack">只增不删致膨胀；无多目标与防遗忘机制</td>
+          </tr>
+          <tr class="hl">
+            <td class="mname m-ge">种群进化<br>GEPA<span class="winner-badge">最优</span></td>
+            <td>自然语言反思归因 + 帕累托前沿多候选 + 系统感知合并</td>
+            <td>唯一同时覆盖信号效率 / 全局探索 / 多目标 / 防退化</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="v">+10~20%</div><div class="k">vs RL(GRPO)<br>平均增益</div></div>
+        <div class="stat"><div class="v">35x</div><div class="k">更少 rollouts<br>(678 vs 1~2.5万次)</div></div>
+        <div class="stat"><div class="v">+14%</div><div class="k">vs MIPROv2<br>聚合增益</div></div>
+        <div class="stat"><div class="v">9.2x</div><div class="k">产出 Prompt<br>更短</div></div>
+      </div>
+
+      <div class="sec-title" style="margin-top:2px;"><span class="num">2</span>为什么它做的最好 <span class="hint">— 三个机制级原因</span></div>
+      <div class="why-list">
+        <div class="wcard w1">
+          <div class="wh"><span class="wname">① ASI 富反馈替代标量奖励</span><span class="wtag">→ 对应我方案：归因提炼</span></div>
+          <div class="wdesc">评估器返回<b>错误信息/推理日志/约束违规</b>等自然语言反馈，而非单一分数；LLM反射器"先诊断病因再开药方"，<b>百次评估达成 RL 万次效果</b></div>
+        </div>
+        <div class="wcard w2">
+          <div class="wh"><span class="wname">② 帕累托前沿防早熟收敛</span><span class="wtag">→ 对应我方案：多目标约束</span></div>
+          <div class="wdesc">保留<b>各任务子集上互补最优</b>的多个候选而非总分第一；系统感知合并杂交优势基因，<b>多方向并行防走死胡同</b></div>
+        </div>
+        <div class="wcard w3">
+          <div class="wh"><span class="wname">③ 跨代经验继承</span><span class="wtag">→ 对应我方案：防遗忘</span></div>
+          <div class="wdesc">每个突变体继承搜索树<b>全部祖先的教训</b>，失败模式知识随代际累积，<b>已学能力不因迭代而丢失</b></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ======== 右列：产品级工程实践 + 收口 ======== -->
+    <div class="col">
+
+      <div class="sec-title"><span class="num">3</span>基于它的产品级工程实践 <span class="hint">— 不是 paper toy，是生产级工程</span></div>
+
+      <div class="prac-list">
+        <div class="pcard pc1">
+          <div class="pco">Databricks</div>
+          <div class="pbody">
+            <div class="pwhat">企业 Agent 整体优化（含 Genie 数据 Agent 的 table search 子系统），开源模型 + GEPA 反超 Claude Opus 4.1 / GPT-5 等前沿闭源模型</div>
+            <div class="pnum">▸ 推理成本降 90x，性能不降反升</div>
+          </div>
+        </div>
+        <div class="pcard pc2">
+          <div class="pco">Dropbox</div>
+          <div class="pbody">
+            <div class="pwhat">Dash 搜索相关性 Judge 优化：gemma-3-12b 小模型经 GEPA 优化后达生产标准</div>
+            <div class="pnum">▸ NMSE 降 45%（8.83→4.86）· JSON 格式错误 40%→&lt;3% · 模型适配周期 1-2周 → 1-2天</div>
+          </div>
+        </div>
+        <div class="pcard pc3">
+          <div class="pco">OpenAI</div>
+          <div class="pbody">
+            <div class="pwhat">官方 Cookbook《Self-Evolving Agents》：以 GEPA 为核心组件构建自愈 Agent 的自动重训闭环（检测退化→自动优化→门控上线）</div>
+            <div class="pnum">▸ 官方认可 GEPA 为自演进循环标准组件</div>
+          </div>
+        </div>
+        <div class="pcard pc4">
+          <div class="pco">平台生态</div>
+          <div class="pbody">
+            <div class="pwhat">Google Gemini Enterprise Agent 平台内置 · 微软官方文档收录 · Shopify CEO 公开背书生产使用</div>
+            <div class="pnum">▸ DSPy / MLflow / Pydantic / HuggingFace / Weaviate 等 50+ 生产系统集成</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="eco-note"><b>工程实践共性：</b>均以「留出集门控 + 回归套件」保上线安全；均用「小模型 + GEPA」替代「大模型 + 手工Prompt」实现降本；均将优化器嵌入 CI/CD 式自动重训管线，而非一次性调优。</div>
+
+      <div class="fusion">
+        <b>我们的方案取三家之长：</b>GEPA 式<b>反思进化 + 帕累托多目标</b>为骨（全局最优）， SkillOpt <b>训练纪律</b>为肉（LR限幅/门控/慢更新，稳定不退化）， SIMBA <b>方差采样</b>为引（评测预算花在最有信息量的样本上）—— <span class="fu-t">在 Eval 底座上构建"信号高效、方向全局、过程稳定"的 Skill 自演进体系</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ Footer ============ -->
+  <div class="foot">
+    <span class="key">结论：GEPA 是当前实证最强且唯一被巨头规模化生产采用的 Eval 驱动自演进方案，其三大机制与我方案设计一一对应</span>
+    <span>数据来源：GEPA (arXiv:2507.19457) · Databricks / Dropbox 工程博客 · OpenAI Cookbook</span>
+  </div>
+
+</div>
+</body>
+</html>

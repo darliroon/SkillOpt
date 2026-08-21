@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>SkillOpt · GEPA · DSPy — 三大最火技能/Prompt 自演进方案</title>
+<style>
+  @page { size: landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: #ffffff; color: #1f2937;
+  }
+  .slide {
+    width: 100vw; height: 100vh; min-height: 720px;
+    display: grid; grid-template-rows: auto 1fr auto;
+    padding: 10px 24px 8px;
+  }
+  /* ---------- Header ---------- */
+  .head { display: flex; align-items: baseline; gap: 14px; border-bottom: 2px solid #2563eb; padding-bottom: 6px; }
+  .head h1 { font-size: 23px; font-weight: 800; color: #0f1e3a; }
+  .head h1 .accent { color: #2563eb; }
+  .head h1 .arrow { color: #94a3b8; font-weight: 600; font-size: 20px; }
+  .head .sub { font-size: 12px; color: #64748b; margin-left: auto; }
+  .head .tag { font-size: 11px; background: #eff6ff; color: #2563eb; padding: 2px 10px; border-radius: 10px; font-weight: 600; border: 1px solid #bfdbfe; }
+
+  /* ---------- Body: 三栏 ---------- */
+  .body { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding-top: 8px; overflow: hidden; }
+
+  .rcard { border: 1px solid #e2e8f0; border-top: 4px solid; border-radius: 8px; padding: 9px 12px; display: flex; flex-direction: column; gap: 6px; background: #fff; overflow: hidden; }
+  .rcard .rh { display: flex; align-items: baseline; gap: 6px; }
+  .rcard .rname { font-size: 17px; font-weight: 800; }
+  .rcard .rsrc { font-size: 9px; color: #94a3b8; margin-left: auto; text-align: right; line-height: 1.3; }
+  .rcard .rkey { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 10px; align-self: flex-start; }
+  .rcard .rmeta { font-size: 10.5px; color: #475569; line-height: 1.45; }
+  .rcard .rmeta b { color: #0f1e3a; }
+
+  .rcard .flow { font-family: Consolas, monospace; font-size: 10px; line-height: 1.45; color: #334155; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 5px; padding: 5px 8px; }
+  .rcard .flow b { color: #0f766e; }
+
+  .rcard .sec-lbl { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+
+  .rcard .feat { font-size: 10.5px; line-height: 1.5; display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  .rcard .feat .f { display: flex; gap: 5px; }
+  .rcard .feat .fi { flex-shrink: 0; font-weight: 800; }
+  .rcard .feat b { color: #0f1e3a; }
+
+  .rcard .result { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 6px 9px; line-height: 1.45; margin-top: auto; }
+  .rcard .result .rlab { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; opacity: .75; display: block; margin-bottom: 2px; }
+
+  /* SkillOpt 蓝 */
+  .r1 { border-top-color: #2563eb; }
+  .r1 .rname { color: #1d4ed8; }
+  .r1 .rkey { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .r1 .feat .fi { color: #2563eb; }
+  .r1 .result { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a5f; }
+  /* GEPA 紫 */
+  .r2 { border-top-color: #7c3aed; }
+  .r2 .rname { color: #6d28d9; }
+  .r2 .rkey { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+  .r2 .feat .fi { color: #7c3aed; }
+  .r2 .result { background: #f5f3ff; border: 1px solid #ddd6fe; color: #3c1d7a; }
+  /* DSPy 绿 */
+  .r3 { border-top-color: #059669; }
+  .r3 .rname { color: #047857; }
+  .r3 .rkey { background: #f0fdf4; color: #047857; border: 1px solid #a7f3d0; }
+  .r3 .feat .fi { color: #059669; }
+  .r3 .result { background: #f0fdf4; border: 1px solid #a7f3d0; color: #064e36; }
+
+  /* 对比条 */
+  .cmp { display: grid; grid-template-columns: 76px repeat(3, 1fr); gap: 2px 8px; font-size: 9.5px; line-height: 1.4; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 10px; margin-top: 6px; }
+  .cmp .ch { font-weight: 700; color: #94a3b8; font-size: 9px; text-transform: uppercase; }
+  .cmp .cl { color: #64748b; font-weight: 600; }
+  .cmp .cv { color: #334155; }
+  .cmp .c1 { color: #1d4ed8; } .cmp .c2 { color: #6d28d9; } .cmp .c3 { color: #047857; }
+
+  .foot { border-top: 1px solid #e2e8f0; padding-top: 5px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; }
+  .foot .key { color: #b45309; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ============ HEADER ============ -->
+  <div class="head">
+    <h1>技能 / Prompt 自演进 <span class="arrow">|</span> <span class="accent">SkillOpt · GEPA · DSPy</span> 三大最火方案</h1>
+    <span class="tag">方案对比一页纸</span>
+    <span class="sub">共性:不改模型权重 · 大批量 Eval 驱动 · 产物是可读文本</span>
+  </div>
+
+  <!-- ============ BODY: 三栏 ============ -->
+  <div class="body">
+
+    <!-- ========== 左 1/3: SkillOpt ========== -->
+    <div class="rcard r1">
+      <div class="rh"><span class="rname">SkillOpt</span><span class="rsrc">Microsoft Research<br>arXiv 2605.23904 · 2026</span></div>
+      <div class="rkey">梯度下降同构 — 技能文档即「权重」</div>
+      <div class="rmeta">把 Markdown 技能当<b>可训练参数</b>,完整照搬 DL 训练纪律:epoch / minibatch / 学习率 / 调度器 / 动量 / 验证门控,产出一份可部署的 best_skill.md。</div>
+      <div class="flow">Rollout → Reflect → Aggregate<br>→ Select(<b>LR 裁剪</b>) → Update → <b>Gate</b><br>Epoch 边界:慢更新(动量) + 元技能</div>
+      <div class="sec-lbl">关键技术点</div>
+      <div class="feat">
+        <div class="f"><span class="fi">▪</span><span><b>文本梯度</b>:轨迹反思产出 add/del/replace 有界编辑补丁</span></div>
+        <div class="f"><span class="fi">▪</span><span><b>学习率裁剪</b>:每步最多改 L 条 → 防过冲震荡</span></div>
+        <div class="f"><span class="fi">▪</span><span><b>留出集严格门控</b>:打平即拒、坏编辑回滚,泛化有保障</span></div>
+        <div class="f"><span class="fi">▪</span><span><b>缓冲区复用</b>:被拒编辑下轮再用;慢更新防跨轮遗忘</span></div>
+        <div class="f"><span class="fi">▪</span><span><b>元技能</b>:累积"哪些编辑有效/有害"的优化器记忆</span></div>
+        <div class="f"><span class="fi">▪</span><span><b>可迁移</b>:跨模型 / 跨 Harness / 跨相邻任务直接复用</span></div>
+      </div>
+      <div class="result"><span class="rlab">一句话成果</span>6 benchmark × 7 模型 × 3 harness 共 52 格全部 best/tied-best,GPT-5.5 直聊 +23.5 分、Codex +24.8、Claude Code +19.1,产物仅 300–2000 token、零额外推理调用。</div>
+    </div>
+
+    <!-- ========== 中 1/3: GEPA ========== -->
+    <div class="rcard r2">
+      <div class="rh"><span class="rname">GEPA</span><span class="rsrc">UC Berkeley / Stanford<br>ICLR 2026 Oral</span></div>
+      <div class="rkey">反思式进化 — Pareto 前沿种群搜索</div>
+      <div class="rmeta">不维护单一最优,而是维护<b>候选种群</b>;评测函数除分数外还回传<b>自然语言反馈</b>(报错、编译输出、约束违规)供反思变异。</div>
+      <div class="flow">Pareto 前沿<b>选亲代</b> → minibatch 带轨迹评测<br>→ 自然语言<b>反思变异</b> → 前沿更新<br>→ 跨候选<b>合并互补经验</b>(交叉)</div>
+      <div class="sec-lbl">关键技术点</div>
+      <div class="feat">
+        <div class="f"><span class="fi">▪</span><span><b>Pareto 前沿选择</b>:在任一样本上最强即存活 → 防早熟收敛、保种群多样性</span></div>
+        <div class="f"><span class="fi">▪</span><span><b>NL 反馈反思变异</b>:利用富文本反馈而非仅标量分数,信息量远超 RL 奖励</span></div>
+        <div class="f"><span class="fi">▪</span><span><b>经验继承</b>:变异继承祖先经验,少量 rollout 也有大增益</span></div>
+        <div class="f"><span class="fi">▪</span><span><b>跨候选交叉</b>:合并不同候选的互补优势</span></div>
+        <div class="f"><span class="fi">▪</span><span><b>推理期搜索</b>:可直接用于代码优化、ARC 推理等场景</span></div>
+      </div>
+      <div class="result"><span class="rlab">一句话成果</span>较 GRPO 平均 +10%(最高 +20%)而 rollout 少至 1/35;较 MIPROv2 高 10%+ 且 prompt 短至 1/9.2 —— 用极少样本打败强化学习。</div>
+    </div>
+
+    <!-- ========== 右 1/3: DSPy ========== -->
+    <div class="rcard r3">
+      <div class="rh"><span class="rname">DSPy / SIMBA</span><span class="rsrc">Stanford NLP<br>dspy.SIMBA · 2025–2026</span></div>
+      <div class="rkey">声明式编程 + 老虎机难例自反思</div>
+      <div class="rmeta">DSPy 把 LLM 管线写成<b>声明式模块</b>(Signature+Module),优化器自动编译 prompt。SIMBA 是其代表优化器:按<b>输出方差</b>分桶,专攻模型"时对时错"的<b>难例</b>。</div>
+      <div class="flow"><b>Minibatch</b> 采样 → 多温度跑轨迹<br>→ 按<b>方差分桶</b>:高方差=难例优先<br>→ <b>append_a_rule</b>(对比好坏轨迹→规则)<br>或 <b>append_a_demo</b>(加成功示例)</div>
+      <div class="sec-lbl">关键技术点</div>
+      <div class="feat">
+        <div class="f"><span class="fi">▪</span><span><b>声明式抽象</b>:prompt 与逻辑解耦,换模型/换优化器零改代码</span></div>
+        <div class="f"><span class="fi">▪</span><span><b>多臂老虎机选择</b>:softmax 采样候选,平衡利用/探索</span></div>
+        <div class="f"><span class="fi">▪</span><span><b>方差驱动难例聚焦</b>:注意力不均匀分配给硬样本</span></div>
+        <div class="f"><span class="fi">▪</span><span><b>双策略产出</b>:规则(泛化)或 demo(具体),按需选择</span></div>
+        <div class="f"><span class="fi">▪</span><span><b>生态最全</b>:GEPA 已并入 DSPy 优化器家族,工程落地首选</span></div>
+      </div>
+      <div class="result"><span class="rlab">一句话成果</span>比 MIPROv2 更样本高效、更稳定,是 GEPA 的直接前身;DSPy 框架已成 prompt 工程事实标准,声明式管线 + 自动优化开箱即用。</div>
+    </div>
+  </div>
+
+  <!-- ============ 对比条 ============ -->
+  <div class="cmp">
+    <div class="ch">对比维度</div><div class="ch c1">SkillOpt</div><div class="ch c2">GEPA</div><div class="ch c3">DSPy / SIMBA</div>
+    <div class="cl">优化机制</div><div class="cv c1">梯度下降类比(单点迭代)</div><div class="cv c2">进化搜索(种群 + Pareto 前沿)</div><div class="cv c3">老虎机选择 + 难例聚焦自反思</div>
+    <div class="cl">利用信号</div><div class="cv c1">轨迹反思 → 有界编辑</div><div class="cv c2">分数 + 自然语言反馈</div><div class="cv c3">好坏轨迹对比 → 规则 / demo</div>
+    <div class="cl">优化对象</div><div class="cv c1">单份技能文档(部署即交付)</div><div class="cv c2">系统内各模块 prompt</div><div class="cv c3">声明式管线的指令 + few-shot</div>
+    <div class="cl">稳定性来源</div><div class="cv c1">LR 裁剪 + 门控 + 慢更新</div><div class="cv c2">Pareto 前沿保多样性</div><div class="cv c3">softmax 探索 + 全集终选</div>
+    <div class="cl">适用场景</div><div class="cv c1">Agent 技能长期演进与迁移</div><div class="cv c2">rollout 昂贵、反馈富文本</div><div class="cv c3">难例集中、需工程化管线</div>
+  </div>
+
+  <!-- ============ FOOTER ============ -->
+  <div class="foot">
+    <span>共性骨架:<span class="key">大批量标注 Eval → 执行采样 → 从失败中提炼 → 改写文本 → 验证接受</span> · 三者均不更新模型权重</span>
+    <span>演化关系:SIMBA → GEPA(+Pareto 前沿 +NL 反馈)· GEPA 已并入 DSPy 优化器家族 · SkillOpt 独立 DL 同构路线</span>
+  </div>
+</div>
+</body>
+</html>

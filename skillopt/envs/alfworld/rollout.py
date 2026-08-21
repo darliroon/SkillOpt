@@ -152,7 +152,7 @@ def run_alfworld_batch(
     out_root: str = "",
     max_api_workers: int = 8,
     temperature: float = 0.4,
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     diagnostic_mode: bool = False,
     diagnostic_instruction: str = "",
     result_ids: list[str] | None = None,

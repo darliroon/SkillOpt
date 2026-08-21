@@ -218,6 +218,7 @@ class TrainingManager:
                 cwd=str(PROJECT_ROOT),
                 bufsize=1,
                 env=env,
+                encoding='utf-8',
                 start_new_session=True,  # create process group for clean kill
             )
         except Exception as e:

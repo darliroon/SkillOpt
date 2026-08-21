@@ -81,7 +81,7 @@ class ALFWorldAdapter(EnvAdapter):
         failure_only: bool = False,
         minibatch_size: int = 8,
         edit_budget: int = 4,
-        max_completion_tokens: int = 16384,
+        max_completion_tokens: int = 0,
     ) -> None:
         self.max_steps = max_steps
         self.workers = max(int(workers or 1), 1)

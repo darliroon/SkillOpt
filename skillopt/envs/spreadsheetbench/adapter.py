@@ -44,7 +44,7 @@ class SpreadsheetBenchAdapter(EnvAdapter):
         minibatch_size: int = 8,
         edit_budget: int = 4,
         seed: int = 42,
-        max_completion_tokens: int = 16384,
+        max_completion_tokens: int = 0,
     ) -> None:
         self.data_root = data_root
         self.mode = mode  # "single", "multi", or "react"

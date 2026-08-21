@@ -117,7 +117,7 @@ def get_backend_name() -> str:
 def chat_optimizer(
     system: str,
     user: str,
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     retries: int = 5,
     stage: str = "optimizer",
     reasoning_effort: str | None = None,
@@ -195,7 +195,7 @@ def chat_optimizer(
 def chat_target(
     system: str,
     user: str,
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     retries: int = 5,
     stage: str = "target",
     reasoning_effort: str | None = None,
@@ -267,7 +267,7 @@ def chat_target(
 
 def chat_optimizer_messages(
     messages: list[dict[str, Any]],
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     retries: int = 5,
     stage: str = "optimizer",
     reasoning_effort: str | None = None,
@@ -361,7 +361,7 @@ def chat_optimizer_messages(
 
 def chat_target_messages(
     messages: list[dict[str, Any]],
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     retries: int = 5,
     stage: str = "target",
     reasoning_effort: str | None = None,
@@ -450,7 +450,7 @@ def chat_target_messages(
 def chat_messages_with_deployment(
     deployment: str,
     messages: list[dict[str, Any]],
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     retries: int = 5,
     stage: str = "custom",
     reasoning_effort: str | None = None,
@@ -478,7 +478,7 @@ def chat_with_deployment(
     deployment: str,
     system: str,
     user: str,
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     retries: int = 5,
     stage: str = "custom",
     reasoning_effort: str | None = None,

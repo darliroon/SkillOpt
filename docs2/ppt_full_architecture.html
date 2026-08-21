@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>基于Eval基座的Skill自演进 — 全项目实现方案架构图</title>
+<style>
+  @page { size: landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: #f8fafc; color: #1f2937;
+  }
+  .slide {
+    width: 100vw; height: 100vh; min-height: 720px;
+    display: grid; grid-template-rows: auto 1fr auto;
+    padding: 8px 18px 6px;
+  }
+
+  /* ---------- Header ---------- */
+  .head { display: flex; align-items: baseline; gap: 14px; border-bottom: 2.5px solid #0f1e3a; padding-bottom: 5px; }
+  .head h1 { font-size: 19px; font-weight: 800; color: #0f1e3a; }
+  .head h1 .accent { color: #2563eb; }
+  .head h1 .arrow { color: #94a3b8; font-weight: 600; font-size: 17px; }
+  .head .tag { font-size: 10.5px; background: #eff6ff; color: #2563eb; padding: 2px 10px; border-radius: 10px; font-weight: 600; border: 1px solid #bfdbfe; }
+  .head .sub { font-size: 11px; color: #64748b; margin-left: auto; }
+  .head .sub b { color: #0f1e3a; }
+
+  /* ---------- Body: 主架构区 ---------- */
+  .body { padding-top: 6px; overflow: hidden; display: flex; flex-direction: column; gap: 5px; }
+
+  /* 飞轮回环容器 */
+  .flywheel {
+    flex: 1; display: grid;
+    grid-template-columns: 1fr 1fr 1.15fr 1fr;
+    grid-template-rows: 1fr auto;
+    gap: 5px;
+    position: relative;
+  }
+
+  /* 各层配色 */
+  .layer { border-radius: 8px; border: 1.5px solid; padding: 5px 8px; display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
+  .L1 { border-color: #64748b; background: linear-gradient(160deg, #f8fafc, #f1f5f9); }  /* 语料 灰 */
+  .L2 { border-color: #7c3aed; background: linear-gradient(160deg, #faf9ff, #f5f3ff); }  /* Evidence 紫 */
+  .L3 { border-color: #2563eb; background: linear-gradient(160deg, #eff6ff, #f0f9ff); }  /* Evaluate 蓝 */
+  .L4 { border-color: #b45309; background: linear-gradient(160deg, #fffdf7, #fffbeb); }  /* 演进 琥珀 */
+  .L5 { border-color: #059669; background: linear-gradient(160deg, #f0fdf4, #ecfdf5); }  /* 部署 绿 */
+
+  /* 层标题 */
+  .l-head { display: flex; align-items: center; gap: 5px; padding-bottom: 3px; border-bottom: 1px solid; }
+  .l-head .l-icon { width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: #fff; flex-shrink: 0; }
+  .l-head .l-title { font-size: 11px; font-weight: 800; }
+  .l-head .l-desc { font-size: 8px; color: #64748b; margin-left: auto; font-style: italic; }
+  .L1 .l-head { border-color: #cbd5e1; } .L1 .l-icon { background: #475569; } .L1 .l-title { color: #334155; }
+  .L2 .l-head { border-color: #ddd6fe; } .L2 .l-icon { background: #7c3aed; } .L2 .l-title { color: #6d28d9; }
+  .L3 .l-head { border-color: #bfdbfe; } .L3 .l-icon { background: #2563eb; } .L3 .l-title { color: #1e40af; }
+  .L4 .l-head { border-color: #fde68a; } .L4 .l-icon { background: #b45309; } .L4 .l-title { color: #92400e; }
+  .L5 .l-head { border-color: #a7f3d0; } .L5 .l-icon { background: #059669; } .L5 .l-title { color: #047857; }
+
+  /* 技术点卡片 */
+  .tcards { display: flex; flex-direction: column; gap: 3px; flex: 1; overflow: hidden; }
+  .tcard { background: rgba(255,255,255,0.85); border-radius: 5px; border: 1px solid; padding: 3px 6px; }
+  .tcard .tc-title { font-size: 9px; font-weight: 800; display: flex; align-items: center; gap: 4px; }
+  .tcard .tc-title .tc-tag { font-size: 7px; font-weight: 600; opacity: 0.7; margin-left: auto; font-style: italic; }
+  .tcard .tc-desc { font-size: 7.8px; line-height: 1.3; color: #475569; margin-top: 1px; }
+
+  .L1 .tcard { border-color: #cbd5e1; } .L1 .tc-title { color: #334155; } .L1 .tc-title .tc-tag { color: #64748b; }
+  .L2 .tcard { border-color: #ddd6fe; } .L2 .tc-title { color: #6d28d9; } .L2 .tc-title .tc-tag { color: #7c3aed; }
+  .L3 .tcard { border-color: #bfdbfe; } .L3 .tc-title { color: #1e40af; } .L3 .tc-title .tc-tag { color: #2563eb; }
+  .L4 .tcard { border-color: #fde68a; } .L4 .tc-title { color: #92400e; } .L4 .tc-title .tc-tag { color: #b45309; }
+  .L5 .tcard { border-color: #a7f3d0; } .L5 .tc-title { color: #047857; } .L5 .tc-title .tc-tag { color: #059669; }
+
+  /* 层间箭头 */
+  .larrow {
+    grid-row: 1; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: #94a3b8; font-weight: 800;
+  }
+
+  /* 底部飞轮条 */
+  .flywheel-bar {
+    grid-column: 1 / -1; grid-row: 2;
+    background: linear-gradient(90deg, #ecfdf5, #f0fdf4, #fffbeb, #eff6ff, #faf5ff);
+    border: 1.5px dashed #94a3b8; border-radius: 8px;
+    padding: 4px 12px; display: flex; align-items: center; gap: 10px;
+  }
+  .fw-label { font-size: 9.5px; font-weight: 800; color: #0f1e3a; white-space: nowrap; }
+  .fw-chain { display: flex; align-items: center; gap: 3px; flex: 1; justify-content: center; }
+  .fw-step { font-size: 8.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+  .fw-s1 { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+  .fw-s2 { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+  .fw-s3 { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+  .fw-s4 { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+  .fw-s5 { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+  .fw-arr { color: #94a3b8; font-size: 11px; font-weight: 800; }
+  .fw-loop { font-size: 9px; font-weight: 800; color: #059669; white-space: nowrap; }
+
+  /* 右侧闭环标注 */
+  .closer {
+    grid-row: 1; grid-column: 5;
+    display: flex; flex-direction: column; gap: 4px; justify-content: center;
+  }
+  .close-card { background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 7px; padding: 5px 8px; }
+  .close-card .cc-title { font-size: 9.5px; font-weight: 800; color: #b91c1c; margin-bottom: 2px; }
+  .close-card .cc-desc { font-size: 7.8px; line-height: 1.35; color: #991b1b; }
+
+  /* Footer */
+  .foot { border-top: 1px solid #e2e8f0; padding-top: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; }
+  .foot .left { color: #64748b; }
+  .foot .left b { color: #0f1e3a; }
+  .foot .right { display: flex; gap: 12px; }
+  .foot .pill { font-size: 8.5px; padding: 2px 8px; border-radius: 8px; font-weight: 700; }
+  .foot .p1 { background: #faf5ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+  .foot .p2 { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+  .foot .p3 { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+  .foot .p4 { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ============ HEADER ============ -->
+  <div class="head">
+    <h1>基于Eval基座的Skill自演进 <span class="arrow">|</span> <span class="accent">全项目实现方案架构</span></h1>
+    <span class="tag">Evidence × Evaluate × 自演进 × 精简部署 × 数据飞轮</span>
+    <span class="sub">参考 <b>SkillOpt</b> / <b>GEPA</b> / <b>DSPy-SIMBA</b> / <b>Anthropic Agent Eval</b></span>
+  </div>
+
+  <div class="body">
+  <div class="flywheel">
+
+    <!-- ========== Layer 1: 基础语料 ========== -->
+    <div class="layer L1">
+      <div class="l-head">
+        <span class="l-icon">0</span>
+        <span class="l-title">基础语料</span>
+        <span class="l-desc">原始素材池</span>
+      </div>
+      <div class="tcards">
+        <div class="tcard">
+          <div class="tc-title">线上对话轨迹<span class="tc-tag">Trace</span></div>
+          <div class="tc-desc">Agent开域执行的全量轨迹含工具调用/推理/结果</div>
+        </div>
+        <div class="tcard">
+          <div class="tc-title">人工金标准集<span class="tc-tag">Ground Truth</span></div>
+          <div class="tc-desc">小规模非敏感人工精标(评分+解释)防漂移锚定</div>
+        </div>
+        <div class="tcard">
+          <div class="tc-title">技能描述+领域知识<span class="tc-tag">Seed</span></div>
+          <div class="tc-desc">冷启动种子任务描述+领域知识供合成扩增</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="larrow">→</div>
+
+    <!-- ========== Layer 2: Evidence 底座 ========== -->
+    <div class="layer L2">
+      <div class="l-head">
+        <span class="l-icon">1</span>
+        <span class="l-title">Evidence 底座</span>
+        <span class="l-desc">结构化事实资产 · 可信可检索</span>
+      </div>
+      <div class="tcards">
+        <div class="tcard">
+          <div class="tc-title">多源语料归一清洗<span class="tc-tag">清洗</span></div>
+          <div class="tc-desc">异构轨迹统一Schema去重脱敏保质量</div>
+        </div>
+        <div class="tcard">
+          <div class="tc-title">轨迹语义切片标注<span class="tc-tag">切片</span></div>
+          <div class="tc-desc">对话轨迹自动切片对齐标注任务节点</div>
+        </div>
+        <div class="tcard">
+          <div class="tc-title">成败信号自动归因<span class="tc-tag">归因</span></div>
+          <div class="tc-desc">SIMBA高方差挖掘→分叉点定位→GEPA因果反思</div>
+        </div>
+        <div class="tcard">
+          <div class="tc-title">证据分层索引管理<span class="tc-tag">索引</span></div>
+          <div class="tc-desc">按场景/难度/时效分层索引支持快速检索</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="larrow">→</div>
+
+    <!-- ========== Layer 3: Evaluate 框架 ========== -->
+    <div class="layer L3" style="grid-column: 3;">
+      <div class="l-head">
+        <span class="l-icon">2</span>
+        <span class="l-title">Evaluate 框架</span>
+        <span class="l-desc">能力度量仪 · 可规模化评测</span>
+      </div>
+      <div class="tcards">
+        <div class="tcard">
+          <div class="tc-title">任务自动合成扩增<span class="tc-tag">合成</span></div>
+          <div class="tc-desc">基于Evidence合成千级任务覆盖长尾场景</div>
+        </div>
+        <div class="tcard">
+          <div class="tc-title">难度分层动态采样<span class="tc-tag">采样</span></div>
+          <div class="tc-desc">按难度/方差分层抽样聚焦高价值批次(SIMBA)</div>
+        </div>
+        <div class="tcard">
+          <div class="tc-title">多维Judge校准评分<span class="tc-tag">评分</span></div>
+          <div class="tc-desc">正确率×Token×时延多维评分Judge偏差校准</div>
+        </div>
+        <div class="tcard">
+          <div class="tc-title">留出集门控防泄漏<span class="tc-tag">门控</span></div>
+          <div class="tc-desc">训练/验证严格隔离门控评测防过拟合(Anthropic)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="larrow">→</div>
+
+    <!-- ========== Layer 4: Eval驱动自演进 + 精简部署 ========== -->
+    <div class="layer L4" style="grid-column: 4 / 6;">
+      <div class="l-head">
+        <span class="l-icon">3</span>
+        <span class="l-title">Eval驱动Skill自演进 + 精简部署</span>
+        <span class="l-desc">离线自驱动进化 · 三范式融合 · 三角同时优化</span>
+      </div>
+      <div class="tcards" style="display: grid; grid-template-columns: 1fr 1fr; gap: 3px;">
+        <!-- 左半: 迭代循环 -->
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <div class="tcard">
+            <div class="tc-title">高价值样本挖掘<span class="tc-tag">SIMBA</span></div>
+            <div class="tc-desc">方差选批→成败分叉→因果归因→回放校准</div>
+          </div>
+          <div class="tcard">
+            <div class="tc-title">LR限幅有界编辑<span class="tc-tag">SkillOpt</span></div>
+            <div class="tc-desc">add/del/replace聚合去冗每步≤L防"头痛医头"</div>
+          </div>
+          <div class="tcard">
+            <div class="tc-title">多维硬约束检查<span class="tc-tag">约束</span></div>
+            <div class="tc-desc">指令长度上限+分支密度阈值超限先del后add</div>
+          </div>
+        </div>
+        <!-- 右半: 门控+部署 -->
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <div class="tcard">
+            <div class="tc-title">全量回归门控<span class="tc-tag">Gate</span></div>
+            <div class="tc-desc">新任务增益+旧任务召回衰减≤门限防回退</div>
+          </div>
+          <div class="tcard">
+            <div class="tc-title">帕累托前沿维护<span class="tc-tag">GEPA</span></div>
+            <div class="tc-desc">成功率×长度×时延多目标慢更新防遗忘</div>
+          </div>
+          <div class="tcard" style="border-color: #a7f3d0; background: rgba(236,253,245,0.6);">
+            <div class="tc-title" style="color: #047857;">拓扑化按需加载<span class="tc-tag" style="color:#059669;">部署</span></div>
+            <div class="tc-desc">训练后去膨胀→能力节点拓扑→推理时只载相关子集Token↓90%+</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 飞轮闭环 + 防污染 ========== -->
+    <div class="closer">
+      <div class="close-card">
+        <div class="cc-title">数据飞轮闭环</div>
+        <div class="cc-desc">新Skill线上执行→产出新Trace→提炼新Evidence→合成更难Benchmark→驱动Skill再进化<br><b>每转一圈:Trace更优·Evidence更纯·考题更难·Skill更强</b></div>
+      </div>
+      <div class="close-card" style="border-color: #fbbf24; background: #fffbeb;">
+        <div class="cc-title" style="color: #b45309;">三道防污染阀</div>
+        <div class="cc-desc" style="color:#92400e;">①留出集种子隔离(评测祖先不参与演进)<br>②黄金回归集冻结(人工确认永不循环)<br>③Evidence支持强度门槛(须跨Trace多次一致)</div>
+      </div>
+    </div>
+
+    <!-- 底部飞轮可视化条 -->
+    <div class="flywheel-bar">
+      <span class="fw-label">数据飞轮:</span>
+      <div class="fw-chain">
+        <span class="fw-step fw-s1">新Skill上线</span>
+        <span class="fw-arr">→</span>
+        <span class="fw-step fw-s2">线上执行产出新Trace</span>
+        <span class="fw-arr">→</span>
+        <span class="fw-step fw-s3">提炼新Evidence</span>
+        <span class="fw-arr">→</span>
+        <span class="fw-step fw-s4">合成更难Benchmark</span>
+        <span class="fw-arr">→</span>
+        <span class="fw-step fw-s5">驱动Skill再进化</span>
+        <span class="fw-arr">→</span>
+        <span class="fw-loop">↻ 闭环增益</span>
+      </div>
+    </div>
+
+  </div>
+  </div>
+
+  <!-- ============ Footer ============ -->
+  <div class="foot">
+    <span class="left"><b>核心价值:</b> 离线自驱动进化替代线上踩坑 · 不改模型权重只改Skill文本 · 三角同时优化(成功率↑·Token↓·时延↓) · 部署零额外推理开销</span>
+    <span class="right">
+      <span class="pill p1">Evidence底座</span>
+      <span class="pill p2">Evaluate框架</span>
+      <span class="pill p3">自演进循环</span>
+      <span class="pill p4">数据飞轮</span>
+    </span>
+  </div>
+
+</div>
+</body>
+</html>

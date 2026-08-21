@@ -219,7 +219,7 @@ def process_one(
     diagnostic_mode: bool = False,
     diagnostic_instruction: str = "",
     diagnostic_trace_context: str = "",
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
 ) -> dict:
     """Run the ReAct agent on a single SpreadsheetBench task.
 
@@ -456,7 +456,7 @@ def run_spreadsheet_batch(
     out_root: str,
     skill_content: str,
     max_turns: int = 30,
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     max_api_workers: int = 64,
     task_timeout: int = 600,
     diagnostic_mode: bool = False,
@@ -591,7 +591,7 @@ def process_one_codegen(
     skill_content: str,
     mode: str = "single",
     max_turns: int = 5,
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     task_timeout: int = 600,
     use_eval_feedback: bool = False,
     diagnostic_mode: bool = False,
@@ -845,7 +845,7 @@ def run_spreadsheet_batch_codegen(
     skill_content: str,
     mode: str = "single",
     max_turns: int = 5,
-    max_completion_tokens: int = 16384,
+    max_completion_tokens: int = 0,
     max_api_workers: int = 32,
     task_timeout: int = 0,
     use_eval_feedback: bool = False,

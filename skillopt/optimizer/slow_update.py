@@ -114,7 +114,7 @@ def _read_trajectory(rollout_dir: str, task_id: str) -> str:
     if not os.path.exists(conv_path):
         return "(trajectory not available)"
     try:
-        with open(conv_path) as f:
+        with open(conv_path, encoding="utf-8") as f:
             conversation = json.load(f)
     except Exception:
         return "(trajectory read error)"
@@ -233,7 +233,7 @@ def save_comparison_pairs(pairs: list[dict], out_path: str) -> None:
             "prev": p["prev"],
             "curr": p["curr"],
         })
-    with open(out_path, "w") as f:
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(slim, f, ensure_ascii=False, indent=2)
 
 
@@ -318,6 +318,7 @@ def run_slow_update(
     curr_rollout_dir: str = "",
     comparison_pairs: list[dict] | None = None,
     system_prompt: str | None = None,
+    max_completion_tokens: int = 0,
 ) -> dict | None:
     """Run the slow update optimizer call for one epoch boundary.
 
@@ -380,7 +381,7 @@ def run_slow_update(
         response, _ = chat_optimizer(
             system=actual_system,
             user=user,
-            max_completion_tokens=16384,
+            max_completion_tokens=max_completion_tokens,
             retries=3,
             stage="slow_update",
         )

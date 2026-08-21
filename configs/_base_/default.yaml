@@ -2,15 +2,99 @@
 # Environment configs should inherit via: _base_: default.yaml
 
 model:
+  # ── OpenAI-compatible API endpoints (shared defaults) ────────────────
   backend: openai_compatible
   optimizer_backend: openai_compatible
   target_backend: openai_compatible
-  optimizer: GLM-5.2
-  target: GLM-5.2
+  # Leave optimizer_* / target_* blank to use the shared value.
+  openai_compatible_base_url: "http://113.46.219.251:8080/v1"
+  # openai_compatible_api_key: "sk-6Vi_7BS_IuofzkYt8t2B9w"
+  openai_compatible_api_key: "sk-aKvB_bgo8FfKyykyFaW8DQ"
 
+  optimizer: GLM-5.2
+  optimizer_openai_compatible_base_url: "http://113.46.219.251:8080/v1"   # blank = use shared
+  # optimizer_openai_compatible_api_key: "sk-6Vi_7BS_IuofzkYt8t2B9w"
+  optimizer_openai_compatible_api_key: "sk-aKvB_bgo8FfKyykyFaW8DQ"
+
+  # target: gpt-4o
+  target: gpt-5.2
+  target_openai_compatible_base_url: "https://yibuapi.com/v1/"      # blank = use shared
+  target_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex"
+
+
+  # 在 azure_openai.py#L380-L412 中真正生效:作为 reasoning = {"effort": ...} (Responses API)或 
+  # reasoning_effort =...(Chat API)传给 API,控制 optimizer/target 所有 LLM 调用的思考量
   reasoning_effort: medium
+
+  # - 只在 skill_update_mode: rewrite_from_suggestions 模式下使用: trainer.py#L864-L866 读取后
+  # (空串转 None ,键不存在时默认 high),专用于"根据建议全量重写 skill"这一次调用,传给 rewrite.py#L19 的 rewrite_skill_from_suggestions()
+  # 目的:全量重写需要更深思考
   rewrite_reasoning_effort: ""
-  rewrite_max_completion_tokens: 64000
+
+  # ── Token limits (all explicit, no hidden defaults) ──────────────────
+  # Reflect / analyst phase (failure & success analysis → skill patches)
+  rewrite_max_completion_tokens: 32000
+  # Aggregate / merge / clip-ranking / lr-autonomous / slow-update / meta-skill
+  optimizer_max_completion_tokens: 32000
+  # Backend-level fallback (only used when a caller omits max_completion_tokens)
+  openai_compatible_max_tokens: 32000
+
+
+train:
+  num_epochs: 4
+  train_size: 0          # 0 = derive from dataset split when available
+  batch_size: 40
+  accumulation: 1
+  seed: 42
+
+
+gradient:
+  minibatch_size: 8
+  merge_batch_size: 8
+  analyst_workers: 16
+  max_analyst_rounds: 3
+  failure_only: false  # only use failures for skill update 只分析失败轨迹开关
+
+
+optimizer:
+  learning_rate: 4          # max edits per step (edit_budget)
+  min_learning_rate: 2      # min edits for decay schedulers
+  lr_scheduler: cosine      # constant / linear / cosine / autonomous
+  lr_control_mode: fixed    # fixed / autonomous / none
+  skill_update_mode: patch  # patch / rewrite_from_suggestions / full_rewrite_minibatch
+  use_slow_update: true
+  slow_update_samples: 20
+  slow_update_gate_with_selection: false
+  longitudinal_pair_policy: mixed  # mixed / changed / unchanged
+  use_meta_skill: true
+  use_skill_aware_reflection: false  # EmbodiSkill: split failures into SKILL_DEFECT (edit body) vs EXECUTION_LAPSE (protected appendix)
+  skill_aware_appendix_source: both  # both = success+failure emit appendix notes; failure_only = only EXECUTION_LAPSE (paper-faithful)
+  skill_aware_consolidate_threshold: 0  # 0 = off; >0 = LLM-consolidate the appendix when its note count exceeds N
+
+
+evaluation:
+  use_gate: true
+  sel_env_num: 0
+  test_env_num: 0
+  eval_test: true
+
+
+env:
+  name: ""
+  skill_init: ""
+  split_mode: ratio       # ratio = build deterministic split from data_path; split_dir = use pre-split train/val/test
+  split_seed: 42
+  split_dir: ""
+  data_path: ""
+  split_output_dir: ""
+  exec_timeout: 120      # per target model/code-agent call timeout in seconds
+  out_root: ""
+
+
+
+
+
+
   codex_exec_path: codex
   codex_exec_sandbox: workspace-write
   codex_exec_profile: ""
@@ -20,20 +104,30 @@ model:
   codex_exec_network_access: false
   codex_exec_web_search: false
   codex_exec_approval_policy: never
+  # 这个参数控制：当目标智能体(target)使用 Codex CLI 执行后端 时，是否把 Codex 的 执行轨迹摘要 
+  # 传回给优化器(optimizer)LLM,供其分析失败原因、生成 skill 补丁时参考。
+  codex_trace_to_optimizer: true
+
+
   claude_code_exec_path: claude
   claude_code_exec_profile: ""
   claude_code_exec_use_sdk: auto
   claude_code_exec_effort: medium
   claude_code_exec_max_thinking_tokens: 16384
+
+
   cursor_exec_path: ""       # blank uses CURSOR_EXEC_PATH or cursor-agent
   cursor_exec_sandbox: ""    # blank uses CURSOR_EXEC_SANDBOX or enabled
-  codex_trace_to_optimizer: true
+
+
   azure_openai_endpoint: ""           # e.g. "https://your-resource.openai.azure.com/"
   azure_openai_api_version: "2024-12-01-preview"
   azure_openai_api_key: ""       # Fill locally if you do not export AZURE_OPENAI_API_KEY
   azure_openai_auth_mode: ""           # empty → fall back to AZURE_OPENAI_AUTH_MODE env (default "azure_cli")
   azure_openai_ad_scope: "https://cognitiveservices.azure.com/.default"
   azure_openai_managed_identity_client_id: ""
+
+
   optimizer_azure_openai_endpoint: ""   # e.g. "https://your-resource.openai.azure.com/"
   optimizer_azure_openai_api_version: "2024-12-01-preview"
   optimizer_azure_openai_api_key: ""
@@ -58,49 +152,3 @@ model:
   target_minimax_base_url: ""       # per-role override
   optimizer_minimax_api_key: ""
   target_minimax_api_key: ""
-
-train:
-  num_epochs: 4
-  train_size: 0          # 0 = derive from dataset split when available
-  batch_size: 40
-  accumulation: 1
-  seed: 42
-
-gradient:
-  minibatch_size: 8
-  merge_batch_size: 8
-  analyst_workers: 16
-  max_analyst_rounds: 3
-  failure_only: false  # only use failures for skill update 只分析失败轨迹开关
-
-optimizer:
-  learning_rate: 4          # max edits per step (edit_budget)
-  min_learning_rate: 2      # min edits for decay schedulers
-  lr_scheduler: cosine      # constant / linear / cosine / autonomous
-  lr_control_mode: fixed    # fixed / autonomous / none
-  skill_update_mode: patch  # patch / rewrite_from_suggestions / full_rewrite_minibatch
-  use_slow_update: true
-  slow_update_samples: 20
-  slow_update_gate_with_selection: false
-  longitudinal_pair_policy: mixed  # mixed / changed / unchanged
-  use_meta_skill: true
-  use_skill_aware_reflection: false  # EmbodiSkill: split failures into SKILL_DEFECT (edit body) vs EXECUTION_LAPSE (protected appendix)
-  skill_aware_appendix_source: both  # both = success+failure emit appendix notes; failure_only = only EXECUTION_LAPSE (paper-faithful)
-  skill_aware_consolidate_threshold: 0  # 0 = off; >0 = LLM-consolidate the appendix when its note count exceeds N
-
-evaluation:
-  use_gate: true
-  sel_env_num: 0
-  test_env_num: 0
-  eval_test: true
-
-env:
-  name: ""
-  skill_init: ""
-  split_mode: ratio       # ratio = build deterministic split from data_path; split_dir = use pre-split train/val/test
-  split_seed: 42
-  split_dir: ""
-  data_path: ""
-  split_output_dir: ""
-  exec_timeout: 120      # per target model/code-agent call timeout in seconds
-  out_root: ""

@@ -28,5 +28,5 @@ env:
   split_output_dir: ""
   max_turns: 1
   max_completion_tokens: 16384
-  workers: 24
+  workers: 16
   limit: 0

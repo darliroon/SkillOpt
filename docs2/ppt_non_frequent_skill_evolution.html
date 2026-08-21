@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>非高频 Skill 自演进 — 成功率快速构建 + 降时延降 Token</title>
+<style>
+  @page { size: landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: #ffffff; color: #1f2937;
+  }
+  .slide {
+    width: 100vw; height: 100vh; min-height: 720px;
+    display: grid; grid-template-rows: auto 1fr auto;
+    padding: 10px 24px 8px;
+  }
+  /* ---------- Header ---------- */
+  .head { display: flex; align-items: baseline; gap: 14px; border-bottom: 2px solid #2563eb; padding-bottom: 6px; }
+  .head h1 { font-size: 23px; font-weight: 800; color: #0f1e3a; }
+  .head h1 .accent { color: #2563eb; }
+  .head h1 .arrow { color: #94a3b8; font-weight: 600; font-size: 20px; }
+  .head .sub { font-size: 12px; color: #64748b; margin-left: auto; }
+  .head .tag { font-size: 11px; background: #eff6ff; color: #2563eb; padding: 2px 10px; border-radius: 10px; font-weight: 600; border: 1px solid #bfdbfe; }
+
+  /* ---------- Body: 左右两栏 ---------- */
+  .body { display: grid; grid-template-columns: 0.92fr 1.08fr; gap: 12px; padding-top: 8px; overflow: hidden; }
+  .col { display: flex; flex-direction: column; gap: 7px; overflow: hidden; }
+
+  .sec-title { font-size: 13px; font-weight: 700; color: #b45309; display: flex; align-items: center; gap: 8px; }
+  .sec-title .num { background: #b45309; color: #fff; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+
+  /* ---- 左侧卡片 ---- */
+  .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 12px; }
+  .card h3 { font-size: 12.5px; color: #1d4ed8; margin-bottom: 4px; font-weight: 700; }
+
+  /* 三角约束 */
+  .triad { display: flex; align-items: stretch; gap: 0; }
+  .triad .pole { flex: 1; text-align: center; display: flex; flex-direction: column; justify-content: center; gap: 1px; padding: 5px 3px; border-radius: 6px; border: 1px solid; }
+  .triad .pole .ico { font-size: 16px; }
+  .triad .pole .lbl { font-size: 11px; font-weight: 800; }
+  .triad .pole .desc { font-size: 9px; line-height: 1.3; }
+  .p-success { background: #f0fdf4; border-color: #86efac; } .p-success .lbl, .p-success .ico { color: #059669; } .p-success .desc { color: #047857; }
+  .p-latency  { background: #fffbeb; border-color: #fde68a; } .p-latency .lbl, .p-latency .ico { color: #b45309; } .p-latency .desc { color: #92400e; }
+  .p-token    { background: #eff6ff; border-color: #bfdbfe; } .p-token .lbl, .p-token .ico { color: #2563eb; } .p-token .desc { color: #1e3a5f; }
+  .triad .vs { display: flex; align-items: center; justify-content: center; font-size: 14px; color: #94a3b8; font-weight: 700; padding: 0 2px; }
+
+  .triad-note { background: #fefce8; border: 1px solid #fde68a; border-radius: 5px; padding: 4px 9px; font-size: 9.5px; color: #92400e; line-height: 1.4; margin-top: 4px; }
+  .triad-note b { color: #b45309; }
+
+  /* 挑战列表 */
+  .challenges { display: flex; flex-direction: column; gap: 3px; }
+  .challenges .ch { display: flex; gap: 5px; font-size: 10px; line-height: 1.4; color: #475569; }
+  .challenges .ch .ci { flex-shrink: 0; font-weight: 800; color: #dc2626; width: 14px; }
+  .challenges .ch b { color: #b91c1c; }
+
+  /* 技术模块 */
+  .tech-grid { display: flex; flex-direction: column; gap: 4px; }
+  .tcard { border: 1px solid; border-left: 3px solid; border-radius: 5px; padding: 5px 8px; background: #fff; }
+  .tcard .th { display: flex; align-items: baseline; gap: 5px; }
+  .tcard .tname { font-size: 11px; font-weight: 800; }
+  .tcard .tpar { font-size: 9px; color: #94a3b8; margin-left: auto; font-style: italic; }
+  .tcard .tdesc { font-size: 9.5px; color: #475569; line-height: 1.4; }
+  .tcard .tdesc b { color: #0f1e3a; }
+  .tcard .tsolve { font-size: 9px; color: #059669; font-weight: 600; margin-top: 2px; }
+  .ta { border-left-color: #2563eb; } .ta .tname { color: #1d4ed8; }
+  .tb { border-left-color: #7c3aed; } .tb .tname { color: #6d28d9; }
+  .tc { border-left-color: #059669; } .tc .tname { color: #047857; }
+
+  /* 竞争力 */
+  .adv-list { display: flex; flex-direction: column; gap: 2px; }
+  .adv-list .ad { display: flex; gap: 5px; font-size: 9.5px; line-height: 1.35; color: #475569; }
+  .adv-list .ad .ai { flex-shrink: 0; font-weight: 800; color: #059669; }
+  .adv-list .ad b { color: #0f1e3a; }
+
+  /* ---- 右侧流程图 ---- */
+  .flow-container { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 10px; flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+
+  .stage-band { border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 8px; background: #fff; display: flex; flex-direction: column; gap: 3px; }
+  .stage-band .sb-title { font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .stage-band .sb-title .sbn { color: #fff; width: 16px; height: 16px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0; }
+  .stage-band .sb-hint { font-size: 9px; color: #94a3b8; font-weight: 500; }
+  .stage-band .sb-solve { font-size: 8.5px; font-weight: 700; padding: 1px 6px; border-radius: 8px; flex-shrink: 0; }
+
+  .sb1 { border-top: 3px solid #2563eb; } .sb1 .sb-title { color: #1d4ed8; } .sb1 .sbn { background: #2563eb; } .sb1 .sb-solve { background: #eff6ff; color: #1d4ed8; }
+  .sb2 { border-top: 3px solid #7c3aed; } .sb2 .sb-title { color: #6d28d9; } .sb2 .sbn { background: #7c3aed; } .sb2 .sb-solve { background: #f5f3ff; color: #6d28d9; }
+  .sb3 { border-top: 3px solid #b45309; } .sb3 .sb-title { color: #b45309; } .sb3 .sbn { background: #b45309; } .sb3 .sb-solve { background: #fffbeb; color: #b45309; }
+  .sb4 { border-top: 3px solid #059669; } .sb4 .sb-title { color: #047857; } .sb4 .sbn { background: #059669; } .sb4 .sb-solve { background: #f0fdf4; color: #047857; }
+  .sb5 { border-top: 3px solid #dc2626; } .sb5 .sb-title { color: #b91c1c; } .sb5 .sbn { background: #dc2626; } .sb5 .sb-solve { background: #fef2f2; color: #b91c1c; }
+
+  /* 流程节点 */
+  .flow-nodes { display: flex; align-items: stretch; gap: 3px; }
+  .fnode { flex: 1; border-radius: 5px; padding: 4px 6px; border: 1px solid; display: flex; flex-direction: column; gap: 1px; text-align: center; justify-content: center; }
+  .fnode .fn-name { font-size: 10px; font-weight: 700; }
+  .fnode .fn-desc { font-size: 8.5px; line-height: 1.25; }
+  .farrow { display: flex; align-items: center; justify-content: center; font-size: 12px; color: #94a3b8; font-weight: 700; width: 10px; flex-shrink: 0; }
+
+  .fn-blue { background: #eff6ff; border-color: #bfdbfe; } .fn-blue .fn-name { color: #1d4ed8; } .fn-blue .fn-desc { color: #1e3a5f; }
+  .fn-amber { background: #fffbeb; border-color: #fde68a; } .fn-amber .fn-name { color: #b45309; } .fn-amber .fn-desc { color: #92400e; }
+  .fn-purple { background: #f5f3ff; border-color: #ddd6fe; } .fn-purple .fn-name { color: #6d28d9; } .fn-purple .fn-desc { color: #3c1d7a; }
+  .fn-green { background: #f0fdf4; border-color: #a7f3d0; } .fn-green .fn-name { color: #047857; } .fn-green .fn-desc { color: #064e36; }
+  .fn-red { background: #fef2f2; border-color: #fecaca; } .fn-red .fn-name { color: #b91c1c; } .fn-red .fn-desc { color: #7f1d1d; }
+
+  /* 阶段间箭头 */
+  .phase-arrow { text-align: center; font-size: 11px; color: #94a3b8; font-weight: 700; line-height: 1; }
+  .phase-arrow .pa-note { font-size: 8.5px; color: #94a3b8; font-weight: 500; font-style: italic; }
+
+  /* epoch note */
+  .epoch-note { background: linear-gradient(90deg, #fffbeb, #fef3c7); border: 1px dashed #b45309; border-radius: 5px; padding: 3px 8px; font-size: 8.5px; color: #92400e; display: flex; align-items: center; gap: 5px; }
+  .epoch-note b { color: #b45309; }
+
+  /* 反馈闭环 */
+  .feedback-loop { border: 1.5px dashed #dc2626; border-radius: 5px; padding: 4px 8px; background: linear-gradient(90deg, #fef2f2, #fffbeb, #eff6ff); font-size: 9px; color: #7f1d1d; display: flex; align-items: center; gap: 6px; }
+  .feedback-loop .fl-icon { font-size: 14px; color: #dc2626; font-weight: 800; flex-shrink: 0; }
+  .feedback-loop b { color: #b91c1c; }
+
+  .foot { border-top: 1px solid #e2e8f0; padding-top: 5px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; }
+  .foot .key { color: #b45309; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- ============ HEADER ============ -->
+  <div class="head">
+    <h1>Agent 开域后 <span class="accent">Skill迭代进化</span> <span class="arrow">|</span> 同步降时延 · 降 Token</h1>
+    <span class="tag">技术方案一页纸</span>
+    <span class="sub">非高频 Skill 快速进化 · 极致丰富提正确率 · 同步压降 Token 与时延</span>
+  </div>
+
+  <div class="body">
+
+    <!-- ========== 左栏 ========== -->
+    <div class="col">
+
+      <!-- 场景定义与挑战 -->
+      <div class="sec-title"><span class="num">A</span>场景定义与挑战</div>
+      <div class="card" style="display:flex;flex-direction:column;gap:5px;">
+        <h3>Agent 开域后 Skill 进入"快速进化"阶段</h3>
+        <div style="font-size:9.5px;color:#475569;line-height:1.4;">
+          已有非高频 Skill 需极致丰富:快速积累规则/模式/边界case 覆盖,将正确率从勉强可用提升到可靠交付。核心矛盾:<b style="color:#b91c1c">丰富↔精简</b> — 丰富提正确率,但变长→Token↑+时延↑
+        </div>
+        <!-- 三角约束 -->
+        <div class="triad">
+          <div class="pole p-success">
+            <div class="ico">✓</div><div class="lbl">正确率 ↑</div>
+            <div class="desc">需极致丰富:积累规则覆盖边界case</div>
+          </div>
+          <div class="vs">⇄</div>
+          <div class="pole p-latency">
+            <div class="ico">⚡</div><div class="lbl">时延 ↓</div>
+            <div class="desc">丰富→变长→推理变慢</div>
+          </div>
+          <div class="vs">⇄</div>
+          <div class="pole p-token">
+            <div class="ico">§</div><div class="lbl">Token ↓</div>
+            <div class="desc">丰富→膨胀→全量塞入爆炸</div>
+          </div>
+        </div>
+        <div class="triad-note">
+          <b>核心矛盾:</b>正确率↑ 需极致丰富(加规则/模式/示例覆盖边界case),但丰富必然变长→Token↑+时延↑。<b>朴素丰富</b>只管加规则,技能越长收益递减。
+        </div>
+        <!-- 五大挑战 -->
+        <div class="challenges">
+          <div class="ch"><span class="ci">①</span><span><b>进化信号稀缺</b>:非高频触发率低,无足够交互数据驱动快速丰富</span></div>
+          <div class="ch"><span class="ci">②</span><span><b>朴素丰富即膨胀</b>:加规则提正确率 → 技能变长 → Token/时延恶化(丰富↔精简矛盾)</span></div>
+          <div class="ch"><span class="ci">③</span><span><b>丰富信号质量低</b>:无标注,LLM-as-judge 有噪声,丰富可能引入有害规则</span></div>
+          <div class="ch"><span class="ci">④</span><span><b>丰富后检索难</b>:技能丰富变长,全量加载不现实</span></div>
+          <div class="ch"><span class="ci">⑤</span><span><b>进化需持续</b>:开域不断涌现新边界case,需持续丰富且能跨场景复用</span></div>
+        </div>
+      </div>
+
+      <!-- 关键技术 & 竞争力 -->
+      <div class="sec-title"><span class="num">B</span>关键技术 & 竞争力</div>
+      <div class="card" style="display:flex;flex-direction:column;gap:5px;">
+        <div class="tech-grid">
+          <div class="tcard ta">
+            <div class="th"><span class="tname">A. 自演进快速进化引擎</span><span class="tpar">合成→执行→Reflect→编辑→门控</span></div>
+            <div class="tdesc">合成千级 Eval 任务 → 批量执行 → Reflect 归纳 → <b>add/del/replace 编辑补丁</b> → <b>留出集门控</b>。极致丰富规则覆盖,快速从勉强可用进化到可靠交付。</div>
+            <div class="tsolve">→ 解决: 快速丰富提正确率</div>
+          </div>
+          <div class="tcard tb">
+            <div class="th"><span class="tname">B. 对比因果信号提纯</span><span class="tpar">数据挖掘/对比学习</span></div>
+            <div class="tdesc">多温度采样 → 构造<b>成功/失败对比对</b> → 提取因果关键证据 → <b>补丁回放校准</b>过滤有害补丁。确保丰富的是<b>高信号</b>而非噪声。</div>
+            <div class="tsolve">→ 解决: 丰富质量(只加有效规则)</div>
+          </div>
+          <div class="tcard tc">
+            <div class="th"><span class="tname">C. 精简约束的丰富 + 按需加载</span><span class="tpar">结构化组织</span></div>
+            <div class="tdesc">演进期 LR+del <b>控长</b> → 演进后<b>分类学切片</b>(核心常驻/非核心按需) → 推理期<b>拓扑路由</b>只载相关子集。丰富而不膨胀,加载而不全量。</div>
+            <div class="tsolve">→ 解决: 丰富同时压降 Token/时延</div>
+          </div>
+        </div>
+        <!-- 竞争力 -->
+        <div style="border-top:1px dashed #e2e8f0;padding-top:4px;">
+          <div style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;margin-bottom:2px;">竞争力</div>
+          <div class="adv-list">
+            <div class="ad"><span class="ai">✓</span><span><b>快速进化</b>:合成任务集+离线演进,不依赖线上触发即可极致丰富</span></div>
+            <div class="ad"><span class="ai">✓</span><span><b>丰富高信号</b>:对比因果+回放校准,只丰富有效规则不加噪声</span></div>
+            <div class="ad"><span class="ai">✓</span><span><b>丰富而精简</b>:LR+del控长+分类学切片+拓扑路由,丰富与精简同时实现</span></div>
+            <div class="ad"><span class="ai">✓</span><span><b>闭环自驱动</b>:感知→进化→部署→反馈,持续发现新边界case</span></div>
+            <div class="ad"><span class="ai">✓</span><span><b>可迁移</b>:进化一次跨模型/跨Harness/跨任务复用</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 右栏: 流程图 ========== -->
+    <div class="col">
+      <div class="sec-title"><span class="num">C</span>技术方案 — Skill 自演进全生命周期(宏观流程)</div>
+      <div class="flow-container">
+
+        <!-- Phase 1: 开域感知与差距识别 -->
+        <div class="stage-band sb1">
+          <div class="sb-title">
+            <span class="sbn">1</span>开域感知与差距识别
+            <span class="sb-solve">解决: 发现需快速进化的 Skill</span>
+            <span class="sb-hint">从真实请求流中发现非高频任务</span>
+          </div>
+          <div class="flow-nodes">
+            <div class="fnode fn-blue">
+              <div class="fn-name">Agent 开域请求流</div>
+              <div class="fn-desc">用户问新类型任务<br>涌现非高频需求</div>
+            </div>
+            <div class="farrow">→</div>
+            <div class="fnode fn-blue">
+              <div class="fn-name">非高频任务聚类</div>
+              <div class="fn-desc">按意图/领域聚类<br>识别信息量适中的任务簇</div>
+            </div>
+            <div class="farrow">→</div>
+            <div class="fnode fn-blue">
+              <div class="fn-name">进化差距识别</div>
+              <div class="fn-desc">正确率不足/覆盖不全<br>需快速进化的技能</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="phase-arrow">↓ <span class="pa-note">待进化 Skill 进入信号构建</span></div>
+
+        <!-- Phase 2: 数据合成与高质量信号构建 -->
+        <div class="stage-band sb2">
+          <div class="sb-title">
+            <span class="sbn">2</span>数据合成与高质量信号构建
+            <span class="sb-solve">解决: 丰富信号质量</span>
+            <span class="sb-hint">对比因果归纳,不依赖标注</span>
+          </div>
+          <div class="flow-nodes">
+            <div class="fnode fn-purple">
+              <div class="fn-name">任务合成扩增</div>
+              <div class="fn-desc">LLM 生成千级<br>任务变体铺满空间</div>
+            </div>
+            <div class="farrow">→</div>
+            <div class="fnode fn-purple">
+              <div class="fn-name">多温度批量执行</div>
+              <div class="fn-desc">收集轨迹+分数<br>产生成功/失败对比对</div>
+            </div>
+            <div class="farrow">→</div>
+            <div class="fnode fn-purple">
+              <div class="fn-name">对比因果提取</div>
+              <div class="fn-desc">成功/失败分叉点<br>提取因果关键证据</div>
+            </div>
+            <div class="farrow">→</div>
+            <div class="fnode fn-purple">
+              <div class="fn-name">补丁回放校准</div>
+              <div class="fn-desc">源任务克隆回放<br>过滤有害补丁</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="phase-arrow">↓ <span class="pa-note">高质量信号进入快速进化循环</span></div>
+
+        <!-- Phase 3: 自演进核心循环 -->
+        <div class="stage-band sb3">
+          <div class="sb-title">
+            <span class="sbn">3</span>自演进快速进化循环 — 极致丰富 + 精简约束
+            <span class="sb-solve">解决: 快速丰富提正确率</span>
+            <span class="sb-hint">不局限于训练/梯度下降 · 广义自演进范式</span>
+          </div>
+          <div class="flow-nodes">
+            <div class="fnode fn-amber">
+              <div class="fn-name">Reflect</div>
+              <div class="fn-desc">归纳失败共性<br>产出丰富补丁</div>
+            </div>
+            <div class="farrow">→</div>
+            <div class="fnode fn-amber">
+              <div class="fn-name">Edit</div>
+              <div class="fn-desc">add/del/replace<br>LR 裁剪+聚合合并</div>
+            </div>
+            <div class="farrow">→</div>
+            <div class="fnode fn-amber">
+              <div class="fn-name">Validate</div>
+              <div class="fn-desc">留出集严格<br>单调门控</div>
+            </div>
+            <div class="farrow">→</div>
+            <div class="fnode fn-amber">
+              <div class="fn-name">精简控长</div>
+              <div class="fn-desc">del 主动删冗余<br>防技能膨胀</div>
+            </div>
+          </div>
+          <div class="epoch-note">
+            <b>Epoch 边界:</b> 🌀 <b>慢更新</b> 防跨轮灾难性遗忘 &nbsp;|&nbsp; 🧠 <b>元技能</b> 累积"哪些编辑有效"的策略记忆 &nbsp;|&nbsp; ⤴ 被拒补丁进缓冲区下轮复用
+          </div>
+        </div>
+
+        <div class="phase-arrow">↓ <span class="pa-note">产出: best_skill.md(原始,300–2000 token)</span></div>
+
+        <!-- Phase 4: 结构化精简与拓扑 -->
+        <div class="stage-band sb4">
+          <div class="sb-title">
+            <span class="sbn">4</span>结构化精简与拓扑
+            <span class="sb-solve">解决: Token 膨胀</span>
+            <span class="sb-hint">分类学切片 + 能力拓扑</span>
+          </div>
+          <div class="flow-nodes">
+            <div class="fnode fn-green">
+              <div class="fn-name">进化后去膨胀</div>
+              <div class="fn-desc">分类学切片<br>核心常驻/非核心按需</div>
+            </div>
+            <div class="farrow">→</div>
+            <div class="fnode fn-green">
+              <div class="fn-name">拓扑化拆分</div>
+              <div class="fn-desc">能力节点拓扑<br>domain→type→instance</div>
+            </div>
+            <div class="farrow">→</div>
+            <div class="fnode fn-green">
+              <div class="fn-name">忠实性校验</div>
+              <div class="fn-desc">压缩后不丢功能<br>回放验证覆盖率</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="phase-arrow">↓ <span class="pa-note">精简拓扑进入部署</span></div>
+
+        <!-- Phase 5: 部署与反馈闭环 -->
+        <div class="stage-band sb5">
+          <div class="sb-title">
+            <span class="sbn">5</span>部署与反馈闭环
+            <span class="sb-solve">解决: 时延 + 闭环驱动</span>
+            <span class="sb-hint">按需加载 · 线上反馈回流</span>
+          </div>
+          <div class="flow-nodes">
+            <div class="fnode fn-red">
+              <div class="fn-name">按需加载</div>
+              <div class="fn-desc">拓扑路由<br>只载相关子集(~100 token)</div>
+            </div>
+            <div class="farrow">→</div>
+            <div class="fnode fn-red">
+              <div class="fn-name">线上执行</div>
+              <div class="fn-desc">Agent 使用精简 Skill<br>收集执行轨迹+结果</div>
+            </div>
+            <div class="farrow">→</div>
+            <div class="fnode fn-red" style="border-width:2px;">
+              <div class="fn-name">best_skill.md</div>
+              <div class="fn-desc">精简可迁移<br>零额外调用</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 反馈闭环 -->
+        <div class="feedback-loop">
+          <span class="fl-icon">⟲</span>
+          <span><b>反馈闭环:</b> 线上执行数据 → 回流 Phase 1 感知层 → 持续发现新边界case / 正确率不足 → 触发下一轮快速进化 <b>(闭环,非一次性训练管道)</b></span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FOOTER ============ -->
+  <div class="foot">
+    <span><span class="key">一句话:</span>Skill 快速进化 — 感知(发现进化差距) × 信号(对比因果提纯) × 进化(Reflect-Edit-Validate 极致丰富) × 精简(丰富同时控长) × 部署(按需加载+反馈闭环) → 开域非高频技能快速丰富提正确率,同时压降 Token/时延</span>
+    <span>预期:正确率 +15~25 分 · Token ↓ 90%+ · 产物 300–2000 token · 零额外推理调用</span>
+  </div>
+</div>
+</body>
+</html>

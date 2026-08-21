@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>主动式生成推荐排序 × Dropbox Dash 案例（右半侧）</title>
+<style>
+  @page { size: landscape; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: #f1f5f9; color: #1f2937;
+  }
+  /* 整页容器：左半留白示意，右半为内容 */
+  .page { width: 100vw; height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+  .left-placeholder {
+    display: flex; align-items: center; justify-content: center;
+    color: #cbd5e1; font-size: 13px; border-right: 1.5px dashed #cbd5e1;
+  }
+
+  /* ---------- 右半侧面板 ---------- */
+  .panel {
+    background: #ffffff; padding: 10px 14px 8px;
+    display: grid; grid-template-rows: auto auto 1fr auto; gap: 7px;
+    overflow: hidden;
+  }
+
+  .p-head { border-bottom: 2px solid #7c3aed; padding-bottom: 5px; }
+  .p-head .kicker { font-size: 9px; font-weight: 700; color: #7c3aed; letter-spacing: 1.5px; }
+  .p-head h2 { font-size: 15.5px; font-weight: 800; color: #0f1e3a; margin-top: 1px; }
+  .p-head h2 .hl { color: #7c3aed; }
+
+  /* ① 痛点 */
+  .sec-tag { display: flex; align-items: center; gap: 6px; }
+  .sec-tag .n {
+    width: 16px; height: 16px; border-radius: 50%; color: #fff;
+    font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .sec-tag .t { font-size: 11.5px; font-weight: 800; color: #0f1e3a; }
+  .sec-tag .s { font-size: 8.5px; color: #94a3b8; margin-left: auto; }
+
+  .pain { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 6px 9px; }
+  .pain .sec-tag .n { background: #dc2626; }
+  .pain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px; }
+  .pain-item { background: #fff; border: 1px solid #fecaca; border-radius: 6px; padding: 5px 7px; }
+  .pain-item .pi-t { font-size: 10px; font-weight: 800; color: #b91c1c; margin-bottom: 2px; }
+  .pain-item .pi-d { font-size: 8.8px; color: #64748b; line-height: 1.4; }
+  .pain-item .pi-d b { color: #374151; }
+
+  /* ② 方案 */
+  .sol { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 6px 9px; display: flex; flex-direction: column; gap: 5px; overflow: hidden; }
+  .sol .sec-tag .n { background: #7c3aed; }
+  .sol-prod { font-size: 9.5px; color: #475569; line-height: 1.45; background: #fff; border: 1px solid #ddd6fe; border-radius: 6px; padding: 5px 8px; }
+  .sol-prod b { color: #5b21b6; }
+
+  .flow { display: flex; align-items: stretch; gap: 4px; }
+  .fstep { flex: 1; background: #fff; border: 1px solid #c4b5fd; border-radius: 6px; padding: 4px 6px; text-align: center; }
+  .fstep .ft { font-size: 9px; font-weight: 800; color: #5b21b6; line-height: 1.25; }
+  .fstep .fd { font-size: 7.8px; color: #64748b; margin-top: 2px; line-height: 1.3; }
+  .farr { align-self: center; color: #a78bfa; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+
+  .map-row { display: flex; gap: 5px; }
+  .map { flex: 1; background: #ede9fe; border-radius: 5px; padding: 4px 7px; font-size: 8.5px; color: #5b21b6; line-height: 1.35; }
+  .map b { font-size: 8.8px; }
+
+  /* ③ 数据 */
+  .data { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 6px 9px; }
+  .data .sec-tag .n { background: #059669; }
+  .data-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 5px; }
+  .d-item { background: #fff; border: 1px solid #a7f3d0; border-radius: 6px; padding: 5px 4px; text-align: center; }
+  .d-item .dv { font-size: 14px; font-weight: 800; color: #047857; }
+  .d-item .dk { font-size: 7.8px; color: #475569; line-height: 1.3; margin-top: 2px; }
+
+  .concl {
+    background: #fffbeb; border: 1.5px dashed #f59e0b; border-radius: 7px;
+    padding: 5px 9px; font-size: 9.3px; color: #92400e; line-height: 1.45;
+  }
+  .concl b { color: #b45309; }
+  .src { font-size: 7.3px; color: #94a3b8; text-align: right; line-height: 1.3; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="left-placeholder">（左半侧：现有内容区）</div>
+
+  <!-- ================= 右半侧 ================= -->
+  <div class="panel">
+
+    <!-- 标题 -->
+    <div class="p-head">
+      <div class="kicker">业务痛点 × 业界实证</div>
+      <h2>主动式生成推荐排序：<span class="hl">Dropbox Dash 相关性裁判的启发</span></h2>
+    </div>
+
+    <!-- ① 我们的痛点 -->
+    <div class="pain">
+      <div class="sec-tag"><span class="n">1</span><span class="t">我们的痛点 — 各流水线共性问题</span><span class="s">主动式生成推荐排序</span></div>
+      <div class="pain-grid">
+        <div class="pain-item">
+          <div class="pi-t">排序质量无法越用越好</div>
+          <div class="pi-d">推荐"相关性判断"靠<b>手写规则/Prompt</b>，线上错排案例持续出现却无法回流改进，用户用得多≠排得准</div>
+        </div>
+        <div class="pain-item">
+          <div class="pi-t">全量打分时延高、Token 贵</div>
+          <div class="pi-d">主动式场景要求<b>候选集全量实时打分</b>，大模型判分链路长、Token 消耗随候选数线性放大，首响时延难达标</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② Dash 的解法 -->
+    <div class="sol">
+      <div class="sec-tag"><span class="n">2</span><span class="t">Dropbox Dash 的解法 — 同构问题已被解决</span></div>
+      <div class="sol-prod">
+        <b>落地产品：Dash（Dropbox 商用 AI 搜索）的搜索相关性裁判（Relevance Judge）</b>——为每个（查询, 文档）对打 1-5 相关分，
+        直接服务<b>排序、训练数据、离线评测</b>三条生产流水线，与我们"生成推荐排序打分"完全同构。
+      </div>
+      <div class="flow">
+        <div class="fstep"><div class="ft">小模型替代</div><div class="fd">gpt-oss-120b 替代 o3<br>判分链路轻量化</div></div>
+        <span class="farr">→</span>
+        <div class="fstep"><div class="ft">GEPA 富反馈进化</div><div class="fd">人机评分分歧+人类解释<br>自动迭代裁判 Prompt</div></div>
+        <span class="farr">→</span>
+        <div class="fstep"><div class="ft">指令库增量演进</div><div class="fd">分歧案例→蒸馏单行规则<br>验证择优组装、不回退</div></div>
+        <span class="farr">→</span>
+        <div class="fstep"><div class="ft">线上分歧回流</div><div class="fd">错排案例持续入库<br>驱动下一轮进化</div></div>
+      </div>
+      <div class="map-row">
+        <div class="map"><b>治"越用越好"：</b>分歧案例即进化燃料，每条规则带案例验证，裁判持续逼近人类判断且稳定不回退</div>
+        <div class="map"><b>治"时延/Token"：</b>轻量模型+短指令承载判分，长链路推理被优化进 Prompt，规模化打分成为可能</div>
+      </div>
+    </div>
+
+    <!-- ③ 结果数据 -->
+    <div class="data">
+      <div class="sec-tag"><span class="n">3</span><span class="t">支撑数据 — 生产环境实测</span></div>
+      <div class="data-grid">
+        <div class="d-item"><div class="dv">-45%</div><div class="dk">判分误差 NMSE<br>8.83 → 4.86</div></div>
+        <div class="d-item"><div class="dv">10-100x</div><div class="dk">同预算下<br>打分吞吐扩大</div></div>
+        <div class="d-item"><div class="dv">40%→&lt;3%</div><div class="dk">小模型坏格式率<br>(gemma-3-12b)</div></div>
+        <div class="d-item"><div class="dv">周→天</div><div class="dk">换模型适配周期<br>1-2周 → 1-2天</div></div>
+      </div>
+    </div>
+
+    <!-- 收口 -->
+    <div class="concl">
+      <b>对我们的启示：</b>推荐排序裁判无需依赖重模型——用 <b>Eval驱动的裁判Skill自演进</b>（分歧回流→规则蒸馏→门控组装），
+      即可实现<b>排序越用越准、判分低时延低Token</b>，错排案例从"损耗"变为"资产"。
+    </div>
+    <div class="src">来源：Dropbox 工程博客《Optimizing Dash Relevance Judge with DSPy/GEPA》(2026.03)，数据均为生产环境实测</div>
+
+  </div>
+</div>
+</body>
+</html>
