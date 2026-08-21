@@ -1,0 +1,14 @@
+configs/_base_/default.yaml
+  h_4d4cc0d7ef2df6 36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.2",
+  "base_commit_sha": "0e38adc7b7e918ed8fbac91ea4b8f5830bcddb61",
+  "prompts": {},
+  "humans": {
+    "h_4d4cc0d7ef2df6": {
+      "author": "lihaitao <1761864532@qq.com>"
+    }
+  }
+}
