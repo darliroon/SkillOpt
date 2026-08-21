@@ -1,0 +1,48 @@
+configs/livemathematicianbench/default.yaml
+  h_4d4cc0d7ef2df6 4,17-18,21
+skillopt/envs/searchqa/dataloader.py
+  s_6aa892f8046072::t_947dbddccb7337 13
+skillopt/envs/searchqa/rollout.py
+  s_6aa892f8046072::t_886277ae69f7fc 235,237,239
+  s_6aa892f8046072::t_669b6e0cb0cd87 382
+  s_6aa892f8046072::t_8f3f0a6b83e5aa 312,314,316
+  s_6aa892f8046072::t_c83ef5d8d6b492 443
+  s_6aa892f8046072::t_6fd0d8be77f19a 263
+  s_6aa892f8046072::t_23b6ce348fa203 348
+configs/_base_/default.yaml
+  h_4d4cc0d7ef2df6 5,9-13,15-22,24-26,28-31,34-41,50,58,74,81,92-97,107-108,110-111,117-118,121-122,129-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.2",
+  "base_commit_sha": "a89676df6ed7dcb36df7bff37f840a7c8f40e5f8",
+  "prompts": {},
+  "humans": {
+    "h_4d4cc0d7ef2df6": {
+      "author": "lihaitao <1761864532@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_6aa892f8046072": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a7dc5ca95519ae4fd1ef692",
+        "model": "glm-5.3"
+      },
+      "human_author": "lihaitao <1761864532@qq.com>",
+      "custom_attributes": {
+        "client_type": "ide",
+        "dedupe_key": "6a7dc5ca95519ae4fd1ef692:6a8732ab6d00dde861740173:afterEdit:6c2a7963",
+        "external_session_id": "6a7dc5ca95519ae4fd1ef692",
+        "session_id": "6a7dc5ca95519ae4fd1ef692",
+        "runtime_client": "trae-tob-git-ai",
+        "tool_use_id": "6a8732ab6d00dde861740173",
+        "edit_kind": "file_edit",
+        "tool_type": "builtin",
+        "operation_id": "6a8732ab6d00dde861740173",
+        "source_scene": "agent",
+        "tool_id": "icube:applyChatSnapshotPatch"
+      }
+    }
+  }
+}
