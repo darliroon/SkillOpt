@@ -33,7 +33,7 @@ model:
 
   # ── Token limits (all explicit, no hidden defaults) ──────────────────
   # Reflect / analyst phase (failure & success analysis → skill patches)
-  rewrite_max_completion_tokens: 32000
+  rewrite_max_completion_tokens: 64000
   # Aggregate / merge / clip-ranking / lr-autonomous / slow-update / meta-skill
   optimizer_max_completion_tokens: 32000
   # Backend-level fallback (only used when a caller omits max_completion_tokens)
