@@ -37,6 +37,7 @@ from skillopt.model import (
     configure_copilot_chat,
     configure_copilot_exec,
     configure_cursor_exec,
+    configure_openai_compatible,
     configure_minimax_chat,
     configure_qwen_chat,
     set_optimizer_backend,
@@ -461,7 +462,7 @@ def main() -> None:
 
     # Load skill
     skill_path = os.path.abspath(args.skill)
-    with open(skill_path) as f:
+    with open(skill_path, encoding="utf-8") as f:
         skill_content = f.read()
     print(f"  [skill] {skill_path} ({len(skill_content)} chars)")
 
@@ -515,6 +516,15 @@ def main() -> None:
         optimizer_model=cfg.get("copilot_chat_optimizer_model") or None,
         target_model=cfg.get("copilot_chat_target_model") or None,
         timeout=cfg.get("copilot_chat_timeout") or None,
+    )
+    configure_openai_compatible(
+        base_url=cfg.get("openai_compatible_base_url") or None,
+        api_key=cfg.get("openai_compatible_api_key") or None,
+        optimizer_base_url=cfg.get("optimizer_openai_compatible_base_url") or None,
+        optimizer_api_key=cfg.get("optimizer_openai_compatible_api_key") or None,
+        target_base_url=cfg.get("target_openai_compatible_base_url") or None,
+        target_api_key=cfg.get("target_openai_compatible_api_key") or None,
+        max_tokens=cfg.get("openai_compatible_max_tokens"),
     )
     configure_qwen_chat(
         base_url=cfg.get("qwen_chat_base_url") or None,

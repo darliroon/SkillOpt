@@ -24,11 +24,18 @@ from collections import defaultdict
 
 from skillopt.datasets.base import BatchSpec
 from skillopt.envs.base import EnvAdapter
-from skillopt.evaluation.gate import GateResult, evaluate_gate, select_gate_score
+from skillopt.evaluation.gate import (
+    GateResult,
+    auto_train_gate_tolerances,
+    evaluate_gate,
+    select_gate_score,
+    train_gate_pass,
+)
 from skillopt.gradient.aggregate import merge_patches
 from skillopt.optimizer.meta_skill import run_meta_skill
 from skillopt.optimizer.clip import rank_and_select
 from skillopt.optimizer.lr_autonomous import decide_autonomous_learning_rate
+from skillopt.optimizer.prox_shrink import run_prox_shrink
 from skillopt.optimizer.rewrite import rewrite_skill_from_suggestions
 from skillopt.optimizer.scheduler import build_scheduler
 from skillopt.optimizer.skill import apply_patch_with_report
@@ -866,6 +873,50 @@ class ReflACTTrainer:
             rewrite_reasoning_effort = None
         rewrite_max_completion_tokens = int(cfg["rewrite_max_completion_tokens"])
         optimizer_max_completion_tokens = int(cfg["optimizer_max_completion_tokens"])
+
+        # ── SkillProx-style forward closed-loop gate ────────────────────
+        use_train_gate = bool(cfg.get("use_train_gate", False))
+        train_gate_max_attempts = max(1, int(cfg.get("train_gate_max_attempts", 3)))
+        train_gate_metric = str(cfg.get("train_gate_metric", "hard"))
+        train_gate_mixed_weight = float(cfg.get("train_gate_mixed_weight", 0.5))
+        train_gate_tolerance = float(cfg.get("train_gate_tolerance", -1.0))
+        train_gate_tolerance_scale = max(
+            0.1, float(cfg.get("train_gate_tolerance_scale", 1.5))
+        )
+
+        # ── SkillProx backward: post-training proximal shrink ───────────
+        use_prox_shrink = bool(cfg.get("use_prox_shrink", False))
+        prox_max_trials = max(1, int(cfg.get("prox_max_trials", 3)))
+        prox_max_compression = min(
+            1.0, max(0.0, float(cfg.get("prox_max_compression", 0.10)))
+        )
+        prox_hard_tolerance = float(cfg.get("prox_hard_tolerance", -1.0))
+        prox_soft_tolerance = float(cfg.get("prox_soft_tolerance", -1.0))
+        prox_tolerance_scale = max(
+            0.1, float(cfg.get("prox_tolerance_scale", 2.5))
+        )
+        prox_loo_env_num = int(cfg.get("prox_loo_env_num", 0) or 0)
+        prox_adaptive_drill = bool(cfg.get("prox_adaptive_drill", True))
+        prox_noise_gate = float(cfg.get("prox_noise_gate", -1.0))
+        _prox_pack_raw = int(cfg.get("prox_sub_pack_chars", -1))
+        prox_sub_pack_chars = (
+            _prox_pack_raw if _prox_pack_raw < 0 else max(200, _prox_pack_raw)
+        )
+        prox_drill_budget = max(0, int(cfg.get("prox_drill_budget", 6)))
+        if use_prox_shrink:
+            print(
+                f"  [config] prox_shrink=ON max_trials={prox_max_trials} "
+                f"max_compression={prox_max_compression} "
+                f"hard_tol={prox_hard_tolerance if prox_hard_tolerance >= 0 else 'auto'} "
+                f"soft_tol={prox_soft_tolerance if prox_soft_tolerance >= 0 else 'auto'} "
+                f"tol_scale={prox_tolerance_scale} "
+                f"loo_env_num={prox_loo_env_num or 'sel'} "
+                f"adaptive_drill={'ON' if prox_adaptive_drill else 'OFF'} "
+                f"noise_gate={prox_noise_gate if prox_noise_gate >= 0 else 'auto'} "
+                f"sub_pack={prox_sub_pack_chars if prox_sub_pack_chars > 0 else 'auto'} "
+                f"drill_budget={prox_drill_budget}"
+            )
+
         if batch_size <= 0:
             raise ValueError(f"batch_size must be positive, got {batch_size}")
         if accumulation <= 0:
@@ -924,6 +975,15 @@ class ReflACTTrainer:
               f"rewrite_reasoning_effort={rewrite_reasoning_effort or 'off'} "
               f"rewrite_max_completion_tokens={rewrite_max_completion_tokens}")
         print(f"  [config] longitudinal_pair_policy={longitudinal_pair_policy}")
+        if use_train_gate:
+            print(
+                f"  [config] train_gate=ON metric={train_gate_metric} "
+                f"max_attempts={train_gate_max_attempts} "
+                f"tolerance={train_gate_tolerance if train_gate_tolerance >= 0 else 'auto'} "
+                f"tol_scale={train_gate_tolerance_scale}"
+            )
+        else:
+            print("  [config] train_gate=off")
         print(f"  [config] base_seeds={base_seeds}")
 
         # ── Resume check ─────────────────────────────────────────────────
@@ -1177,6 +1237,10 @@ class ReflACTTrainer:
                 all_raw_patches: list[dict | None] = []
                 all_rollout_results: list[dict] = []
                 accum_rollout_stats: list[dict] = []
+                # Per-batch info for the SkillProx train gate (re-execution)
+                # and in-step retries (re-reflect): {"spec", "seed",
+                # "pred_dir", "results"} per accumulation batch.
+                train_batch_infos: list[dict] = []
                 total_rollout_time = 0.0
                 total_reflect_time = 0.0
 
@@ -1254,6 +1318,12 @@ class ReflACTTrainer:
                         "n_failure_patches": len(failure_patches),
                         "n_success_patches": len(success_patches),
                     })
+                    train_batch_infos.append({
+                        "spec": batch_spec if dataloader is not None else None,
+                        "seed": batch_seed,
+                        "pred_dir": pred_dir,
+                        "results": rollout_results,
+                    })
 
                 # ── End of accumulation loop ─────────────────────────────
 
@@ -1305,189 +1375,495 @@ class ReflACTTrainer:
                     print("    [skip] no usable patches — skill unchanged")
                     continue
 
-                # ③ AGGREGATE ──────────────────────────────────────────────
-                t_phase = time.time()
-                merged_patch = merge_patches(
-                    current_skill, all_failure_patches, all_success_patches,
-                    batch_size=merge_bs, verbose=True,
-                    workers=cfg["analyst_workers"],
-                    update_mode=update_mode,
-                    meta_skill_context=active_meta_skill,
-                    max_completion_tokens=optimizer_max_completion_tokens,
-                )
-                with open(os.path.join(step_dir, "merged_patch.json"), "w", encoding="utf-8") as f:
-                    json.dump(merged_patch, f, ensure_ascii=False, indent=2)
+                # ── SkillProx forward loop: ③④⑤ + ⑤.5 TRAIN-GATE ─────────
+                # Wrapped in an in-step attempt loop.  Attempt 0 keeps the
+                # original artifact layout (backward compatible); retries
+                # write to step_dir/retry_{attempt}/ and re-run REFLECT with
+                # the failed attempts' feedback appended to the diagnostic
+                # context (closed-loop, SkillProx-style).  With use_train_gate
+                # off this runs exactly once and reproduces the original
+                # pipeline verbatim.
+                n_attempts = train_gate_max_attempts if use_train_gate else 1
+                attempt_records: list[dict] = []
+                attempt_feedback: list[dict] = []  # buf-style entries fed to retry reflect
+                flush_raw_patches: list[dict | None] = list(all_raw_patches)
+                usable_candidate = False
+                skip_reason: str | None = None
+                total_train_gate_time = 0.0
 
-                merged_items = get_payload_items(merged_patch, update_mode)
-                n_edits_merged = len(merged_items)
-                step_rec["n_edits_merged"] = n_edits_merged
-                step_rec["timing"]["aggregate_s"] = round(time.time() - t_phase, 1)
-                print(f"    [3/6 done] merged {n_edits_merged} {payload_label(update_mode)}")
-
-                # ④ SELECT ─────────────────────────────────────────────────
-                t_phase = time.time()
-                lr_decision = None
-                if is_full_rewrite_minibatch_mode(update_mode):
-                    edit_budget = None
-                    ranked_patch = merged_patch
-                    ranked_items = merged_items
-                    n_edits_ranked = len(ranked_items)
-                    step_rec["n_edits_ranked"] = n_edits_ranked
-                    step_rec["edit_budget"] = None
-                    step_rec["lr_control_mode"] = "none"
-                    with open(os.path.join(step_dir, "ranked_edits.json"), "w", encoding="utf-8") as f:
-                        json.dump(ranked_patch, f, ensure_ascii=False, indent=2)
-                else:
-                    if lr_control_mode == "autonomous":
-                        lr_decision = decide_autonomous_learning_rate(
-                            skill_content=current_skill,
-                            merged_patch=merged_patch,
-                            update_mode=update_mode,
-                            rollout_hard=agg_hard,
-                            rollout_soft=agg_soft,
-                            rollout_n=total_n,
-                            step_buffer_context=step_buffer_context,
-                            meta_skill_context=active_meta_skill,
-                            max_completion_tokens=optimizer_max_completion_tokens,
-                        )
-                        edit_budget = int(lr_decision["learning_rate"])
-                        with open(os.path.join(step_dir, "lr_decision.json"), "w", encoding="utf-8") as f:
-                            json.dump(lr_decision, f, ensure_ascii=False, indent=2)
-                        with open(os.path.join(out_root, "lr_history.jsonl"), "a", encoding="utf-8") as f:
-                            f.write(json.dumps({
-                                "step": global_step,
-                                "epoch": epoch,
-                                **lr_decision,
-                            }, ensure_ascii=False) + "\n")
+                # Tolerance kwargs for the train gate, measured ONCE per step
+                # (the phase-① baseline never changes across attempts).  Auto
+                # mode derives it from this step's rollout noise: σ follows
+                # batch_size × accumulation and the current difficulty p, so
+                # the floor adapts per dataset / per step with no tuning.
+                if use_train_gate:
+                    if train_gate_tolerance >= 0:
+                        tg_tol_kwargs: dict = {"tolerance": train_gate_tolerance}
                     else:
-                        edit_budget = scheduler.step()
-                    ranked_patch = rank_and_select(
-                        current_skill, merged_patch,
-                        max_edits=edit_budget,
+                        tg_tol_kwargs = auto_train_gate_tolerances(
+                            all_rollout_results,
+                            train_gate_tolerance_scale,
+                            train_gate_metric,
+                            train_gate_mixed_weight,
+                        )
+                        _tol_desc = ", ".join(
+                            f"{k}={v:.4f}" for k, v in tg_tol_kwargs.items()
+                        )
+                        print(
+                            f"    [5.5 TRAIN-GATE] auto tolerance "
+                            f"(scale={train_gate_tolerance_scale}, "
+                            f"n={len(all_rollout_results)}): {_tol_desc}"
+                        )
+                total_aggregate_time = 0.0
+                total_select_time = 0.0
+                total_update_time = 0.0
+
+                # LR budget is decided once per step (attempt 0) and reused
+                # by retries, so a decay scheduler is not advanced once per
+                # attempt instead of once per step.
+                lr_decision = None
+                edit_budget = None
+                candidate_skill = current_skill
+                rewrite_result = None
+                apply_report: list[dict] = []
+                ranked_patch = None
+                ranked_items: list[dict] = []
+                cand_hash = skill_hash(current_skill)
+
+                for attempt in range(n_attempts):
+                    base_dir = step_dir if attempt == 0 else os.path.join(step_dir, f"retry_{attempt}")
+
+                    # ②' RE-REFLECT (retries only): reuse ①'s rollout results —
+                    # current_skill is unchanged, so a same-seed re-rollout
+                    # would be identical; only the diagnostic context changes.
+                    if attempt > 0:
+                        os.makedirs(base_dir, exist_ok=True)
+                        print(
+                            f"    [retry {attempt}/{n_attempts - 1}] re-reflecting "
+                            f"with feedback from {len(attempt_feedback)} rejected attempt(s)"
+                        )
+                        t_phase = time.time()
+                        retry_context = step_buffer_context
+                        if attempt_feedback:
+                            extra_ctx = _format_step_buffer(attempt_feedback)
+                            retry_context = (
+                                f"{extra_ctx}\n\n{step_buffer_context}"
+                                if step_buffer_context else extra_ctx
+                            )
+                        re_failure: list[dict] = []
+                        re_success: list[dict] = []
+                        re_raw: list[dict | None] = []
+                        for a, info in enumerate(train_batch_infos):
+                            re_batch_dir = (
+                                os.path.join(base_dir, f"batch_{a}")
+                                if accumulation > 1 else base_dir
+                            )
+                            re_patches_dir = os.path.join(re_batch_dir, "patches")
+                            re_raw_patches = adapter.reflect(
+                                info["results"], current_skill, re_batch_dir,
+                                prediction_dir=info["pred_dir"],
+                                patches_dir=re_patches_dir,
+                                random_seed=info["seed"],
+                                step_buffer_context=retry_context,
+                                meta_skill_context=active_meta_skill,
+                                max_completion_tokens=rewrite_max_completion_tokens,
+                            )
+                            re_f, re_s = _normalise_patches(re_raw_patches, update_mode=update_mode)
+                            re_failure.extend(re_f)
+                            re_success.extend(re_s)
+                            re_raw.extend(re_raw_patches)
+                        total_reflect_time += time.time() - t_phase
+                        all_failure_patches = re_failure
+                        all_success_patches = re_success
+                        all_raw_patches = re_raw
+                        flush_raw_patches.extend(re_raw)
+                        step_rec["n_patches"] = len(re_failure) + len(re_success)
+                        step_rec["n_failure_patches"] = len(re_failure)
+                        step_rec["n_success_patches"] = len(re_success)
+
+                        if not re_failure and not re_success:
+                            attempt_records.append({
+                                "attempt": attempt,
+                                "passed": False,
+                                "reason": "re-reflect produced no patches",
+                            })
+                            attempt_feedback.append({
+                                "step": f"{global_step}·a{attempt}",
+                                "action": "attempt_rejected",
+                                "n_total": len(all_rollout_results) or 1,
+                                "n_fail": sum(
+                                    1 for r in all_rollout_results
+                                    if not r.get("hard") or float(r.get("hard", 0)) < 1e-9
+                                ),
+                                "failure_patterns": _extract_failure_patterns(
+                                    all_rollout_results, step_dir,
+                                ),
+                                "rejected_edits": [],
+                            })
+                            continue
+
+                    # ③ AGGREGATE ──────────────────────────────────────────
+                    t_phase = time.time()
+                    merged_patch = merge_patches(
+                        current_skill, all_failure_patches, all_success_patches,
+                        batch_size=merge_bs, verbose=True,
+                        workers=cfg["analyst_workers"],
                         update_mode=update_mode,
                         meta_skill_context=active_meta_skill,
                         max_completion_tokens=optimizer_max_completion_tokens,
                     )
-                    with open(os.path.join(step_dir, "ranked_edits.json"), "w", encoding="utf-8") as f:
-                        json.dump(ranked_patch, f, ensure_ascii=False, indent=2)
+                    with open(os.path.join(base_dir, "merged_patch.json"), "w", encoding="utf-8") as f:
+                        json.dump(merged_patch, f, ensure_ascii=False, indent=2)
 
-                    ranked_items = get_payload_items(ranked_patch, update_mode)
-                    n_edits_ranked = len(ranked_items)
-                    step_rec["n_edits_ranked"] = n_edits_ranked
-                    step_rec["edit_budget"] = edit_budget
-                    step_rec["lr_control_mode"] = lr_control_mode
-                    if lr_decision is not None:
-                        step_rec["lr_decision"] = lr_decision
-                step_rec["timing"]["select_s"] = round(time.time() - t_phase, 1)
+                    merged_items = get_payload_items(merged_patch, update_mode)
+                    n_edits_merged = len(merged_items)
+                    step_rec["n_edits_merged"] = n_edits_merged
+                    total_aggregate_time += time.time() - t_phase
+                    print(f"    [3/6 done] merged {n_edits_merged} {payload_label(update_mode)}")
 
-                support_counts = [
-                    item.get("support_count", 0) for item in ranked_items if isinstance(item, dict)
-                ]
-                step_rec["support_counts"] = support_counts
-                if is_full_rewrite_minibatch_mode(update_mode):
-                    print(
-                        f"    [4/6 SELECT] skipped LR/select; "
-                        f"using {n_edits_ranked} merged {payload_label(update_mode)}"
-                    )
-                else:
-                    print(
-                        f"    [4/6 SELECT] "
-                        f"{n_edits_merged} -> {n_edits_ranked} {payload_label(update_mode)} "
-                        f"(budget={edit_budget}, lr_control={lr_control_mode})"
-                    )
-
-                # ⑤ UPDATE ─────────────────────────────────────────────────
-                t_phase = time.time()
-                rewrite_result = None
-                if update_mode == "rewrite_from_suggestions":
-                    rewrite_result = rewrite_skill_from_suggestions(
-                        current_skill,
-                        ranked_patch,
-                        step_buffer_context=step_buffer_context,
-                        env=cfg.get("env"),
-                        reasoning_effort=rewrite_reasoning_effort,
-                        max_completion_tokens=rewrite_max_completion_tokens,
-                    )
-                    if rewrite_result and rewrite_result.get("new_skill"):
-                        candidate_skill = rewrite_result["new_skill"]
-                        apply_report = []
-                        with open(os.path.join(step_dir, "rewrite_result.json"), "w", encoding="utf-8") as f:
-                            json.dump(rewrite_result, f, ensure_ascii=False, indent=2)
+                    # ④ SELECT ─────────────────────────────────────────────
+                    t_phase = time.time()
+                    if is_full_rewrite_minibatch_mode(update_mode):
+                        edit_budget = None
+                        ranked_patch = merged_patch
+                        ranked_items = merged_items
+                        n_edits_ranked = len(ranked_items)
+                        step_rec["n_edits_ranked"] = n_edits_ranked
+                        step_rec["edit_budget"] = None
+                        step_rec["lr_control_mode"] = "none"
+                        with open(os.path.join(base_dir, "ranked_edits.json"), "w", encoding="utf-8") as f:
+                            json.dump(ranked_patch, f, ensure_ascii=False, indent=2)
                     else:
-                        candidate_skill = current_skill
-                        apply_report = []
-                elif is_full_rewrite_minibatch_mode(update_mode):
-                    skill_candidates = get_payload_items(ranked_patch, update_mode)
-                    selected_candidate = next(
-                        (
-                            item for item in skill_candidates
-                            if isinstance(item, dict) and str(item.get("new_skill", "")).strip()
-                        ),
-                        None,
-                    )
-                    if selected_candidate:
-                        candidate_skill = str(selected_candidate["new_skill"]).rstrip() + "\n"
-                        apply_report = []
-                        rewrite_result = {
-                            "reasoning": ranked_patch.get("reasoning", ""),
-                            "change_summary": selected_candidate.get("change_summary", []),
-                            "title": selected_candidate.get("title", ""),
-                            "source_type": selected_candidate.get("source_type", ""),
+                        if attempt == 0:
+                            if lr_control_mode == "autonomous":
+                                lr_decision = decide_autonomous_learning_rate(
+                                    skill_content=current_skill,
+                                    merged_patch=merged_patch,
+                                    update_mode=update_mode,
+                                    rollout_hard=agg_hard,
+                                    rollout_soft=agg_soft,
+                                    rollout_n=total_n,
+                                    step_buffer_context=step_buffer_context,
+                                    meta_skill_context=active_meta_skill,
+                                    max_completion_tokens=optimizer_max_completion_tokens,
+                                )
+                                edit_budget = int(lr_decision["learning_rate"])
+                                with open(os.path.join(step_dir, "lr_decision.json"), "w", encoding="utf-8") as f:
+                                    json.dump(lr_decision, f, ensure_ascii=False, indent=2)
+                                with open(os.path.join(out_root, "lr_history.jsonl"), "a", encoding="utf-8") as f:
+                                    f.write(json.dumps({
+                                        "step": global_step,
+                                        "epoch": epoch,
+                                        **lr_decision,
+                                    }, ensure_ascii=False) + "\n")
+                            else:
+                                edit_budget = scheduler.step()
+                        ranked_patch = rank_and_select(
+                            current_skill, merged_patch,
+                            max_edits=edit_budget,
+                            update_mode=update_mode,
+                            meta_skill_context=active_meta_skill,
+                            max_completion_tokens=optimizer_max_completion_tokens,
+                        )
+                        with open(os.path.join(base_dir, "ranked_edits.json"), "w", encoding="utf-8") as f:
+                            json.dump(ranked_patch, f, ensure_ascii=False, indent=2)
+
+                        ranked_items = get_payload_items(ranked_patch, update_mode)
+                        n_edits_ranked = len(ranked_items)
+                        step_rec["n_edits_ranked"] = n_edits_ranked
+                        step_rec["edit_budget"] = edit_budget
+                        step_rec["lr_control_mode"] = lr_control_mode
+                        if lr_decision is not None:
+                            step_rec["lr_decision"] = lr_decision
+                    total_select_time += time.time() - t_phase
+
+                    support_counts = [
+                        item.get("support_count", 0) for item in ranked_items if isinstance(item, dict)
+                    ]
+                    step_rec["support_counts"] = support_counts
+                    if is_full_rewrite_minibatch_mode(update_mode):
+                        print(
+                            f"    [4/6 SELECT] skipped LR/select; "
+                            f"using {n_edits_ranked} merged {payload_label(update_mode)}"
+                        )
+                    else:
+                        print(
+                            f"    [4/6 SELECT] "
+                            f"{n_edits_merged} -> {n_edits_ranked} {payload_label(update_mode)} "
+                            f"(budget={edit_budget}, lr_control={lr_control_mode})"
+                        )
+
+                    # ⑤ UPDATE ─────────────────────────────────────────────
+                    t_phase = time.time()
+                    rewrite_result = None
+                    if update_mode == "rewrite_from_suggestions":
+                        rewrite_result = rewrite_skill_from_suggestions(
+                            current_skill,
+                            ranked_patch,
+                            step_buffer_context=step_buffer_context,
+                            env=cfg.get("env"),
+                            reasoning_effort=rewrite_reasoning_effort,
+                            max_completion_tokens=rewrite_max_completion_tokens,
+                        )
+                        if rewrite_result and rewrite_result.get("new_skill"):
+                            candidate_skill = rewrite_result["new_skill"]
+                            apply_report = []
+                            with open(os.path.join(base_dir, "rewrite_result.json"), "w", encoding="utf-8") as f:
+                                json.dump(rewrite_result, f, ensure_ascii=False, indent=2)
+                        else:
+                            candidate_skill = current_skill
+                            apply_report = []
+                    elif is_full_rewrite_minibatch_mode(update_mode):
+                        skill_candidates = get_payload_items(ranked_patch, update_mode)
+                        selected_candidate = next(
+                            (
+                                item for item in skill_candidates
+                                if isinstance(item, dict) and str(item.get("new_skill", "")).strip()
+                            ),
+                            None,
+                        )
+                        if selected_candidate:
+                            candidate_skill = str(selected_candidate["new_skill"]).rstrip() + "\n"
+                            apply_report = []
+                            rewrite_result = {
+                                "reasoning": ranked_patch.get("reasoning", ""),
+                                "change_summary": selected_candidate.get("change_summary", []),
+                                "title": selected_candidate.get("title", ""),
+                                "source_type": selected_candidate.get("source_type", ""),
+                            }
+                            with open(os.path.join(base_dir, "full_rewrite_result.json"), "w", encoding="utf-8") as f:
+                                json.dump(
+                                    {
+                                        "selected_candidate": selected_candidate,
+                                        "merged_patch": ranked_patch,
+                                    },
+                                    f,
+                                    ensure_ascii=False,
+                                    indent=2,
+                                )
+                        else:
+                            candidate_skill = current_skill
+                            apply_report = []
+                    else:
+                        candidate_skill, apply_report = apply_patch_with_report(current_skill, ranked_patch)
+                    with open(os.path.join(base_dir, "candidate_skill.md"), "w", encoding="utf-8") as f:
+                        f.write(candidate_skill)
+                    if apply_report:
+                        with open(os.path.join(base_dir, "edit_apply_report.json"), "w", encoding="utf-8") as f:
+                            json.dump(apply_report, f, indent=2, ensure_ascii=False)
+
+                    cand_hash = skill_hash(candidate_skill)
+                    step_rec["candidate_hash"] = cand_hash
+                    step_rec["candidate_skill_len"] = len(candidate_skill)
+                    if rewrite_result:
+                        step_rec["rewrite_change_summary"] = rewrite_result.get("change_summary", [])
+                    if apply_report:
+                        step_rec["edit_apply_summary"] = {
+                            "total": len(apply_report),
+                            "applied": sum(
+                                1 for row in apply_report if str(row.get("status", "")).startswith("applied")
+                            ),
+                            "skipped": sum(
+                                1 for row in apply_report if str(row.get("status", "")).startswith("skipped")
+                            ),
+                            "errors": sum(
+                                1 for row in apply_report if row.get("status") == "error"
+                            ),
                         }
-                        with open(os.path.join(step_dir, "full_rewrite_result.json"), "w", encoding="utf-8") as f:
-                            json.dump(
-                                {
-                                    "selected_candidate": selected_candidate,
-                                    "merged_patch": ranked_patch,
-                                },
-                                f,
-                                ensure_ascii=False,
-                                indent=2,
-                            )
-                    else:
-                        candidate_skill = current_skill
-                        apply_report = []
-                else:
-                    candidate_skill, apply_report = apply_patch_with_report(current_skill, ranked_patch)
-                with open(os.path.join(step_dir, "candidate_skill.md"), "w", encoding="utf-8") as f:
-                    f.write(candidate_skill)
-                if apply_report:
-                    with open(os.path.join(step_dir, "edit_apply_report.json"), "w", encoding="utf-8") as f:
-                        json.dump(apply_report, f, indent=2, ensure_ascii=False)
+                    total_update_time += time.time() - t_phase
+                    if (
+                        update_mode == "rewrite_from_suggestions"
+                        and rewrite_result is None
+                    ) or (
+                        is_full_rewrite_minibatch_mode(update_mode)
+                        and rewrite_result is None
+                    ):
+                        # Rewrite produced nothing.  With the train gate off
+                        # this preserves the original skip-step behaviour;
+                        # with it on, a failed rewrite is just a failed
+                        # attempt — retry with feedback.
+                        if not use_train_gate:
+                            skip_reason = "skip_no_rewrite"
+                            break
+                        attempt_records.append({
+                            "attempt": attempt,
+                            "n_edits": len(ranked_items),
+                            "candidate_len": len(current_skill),
+                            "passed": False,
+                            "reason": "no usable rewrite generated",
+                        })
+                        attempt_feedback.append({
+                            "step": f"{global_step}·a{attempt}",
+                            "action": "attempt_rejected",
+                            "n_total": len(all_rollout_results) or 1,
+                            "n_fail": sum(
+                                1 for r in all_rollout_results
+                                if not r.get("hard") or float(r.get("hard", 0)) < 1e-9
+                            ),
+                            "failure_patterns": _extract_failure_patterns(
+                                all_rollout_results, base_dir,
+                            ),
+                            "score_before": agg_hard,
+                            "score_after": None,
+                            "rejected_edits": [
+                                short_item_summary(item, update_mode)
+                                for item in ranked_items
+                                if isinstance(item, dict)
+                            ],
+                        })
+                        print(
+                            f"    [5/6 UPDATE] attempt {attempt}: no usable "
+                            f"rewrite — treating as failed attempt"
+                        )
+                        continue
+                    print(
+                        f"    [5/6 UPDATE] "
+                        f"skill_len {len(current_skill)} -> {len(candidate_skill)}"
+                    )
 
-                cand_hash = skill_hash(candidate_skill)
-                step_rec["candidate_hash"] = cand_hash
-                step_rec["candidate_skill_len"] = len(candidate_skill)
-                if rewrite_result:
-                    step_rec["rewrite_change_summary"] = rewrite_result.get("change_summary", [])
-                if apply_report:
-                    step_rec["edit_apply_summary"] = {
-                        "total": len(apply_report),
-                        "applied": sum(
-                            1 for row in apply_report if str(row.get("status", "")).startswith("applied")
+                    # ⑤.5 TRAIN-GATE (SkillProx forward closed-loop) ───────
+                    # Re-execute the candidate on the SAME training batches
+                    # used in ①; only a candidate that does not drop the
+                    # train metric may proceed to the selection gate ⑥.
+                    if use_train_gate:
+                        t_phase = time.time()
+                        tg_results_all: list[dict] = []
+                        if cand_hash == skill_hash(current_skill):
+                            # Candidate identical to current skill: no
+                            # re-execution needed (a re-rollout would only
+                            # add sampling noise), trivially passes.
+                            cand_train_hard, cand_train_soft = agg_hard, agg_soft
+                            tg_passed, tg_reason = True, "candidate identical to current skill"
+                        else:
+                            tg_stats: list[dict] = []
+                            for a, info in enumerate(train_batch_infos):
+                                if dataloader is not None:
+                                    tg_env, _, _ = _build_train_env(info["spec"])
+                                else:
+                                    tg_env = adapter.build_train_env(
+                                        batch_size=batch_size,
+                                        seed=info["seed"],
+                                        out_root=out_root,
+                                    )
+                                tg_dir = os.path.join(base_dir, "train_gate", f"batch_{a}")
+                                tg_results = adapter.rollout(tg_env, candidate_skill, tg_dir)
+                                tg_h, tg_s = compute_score(tg_results)
+                                tg_stats.append({
+                                    "batch_idx": a,
+                                    "n_envs": len(tg_results),
+                                    "hard": tg_h,
+                                    "soft": tg_s,
+                                })
+                                tg_results_all.extend(tg_results)
+                            tg_n = sum(b["n_envs"] for b in tg_stats)
+                            cand_train_hard = (
+                                sum(b["hard"] * b["n_envs"] for b in tg_stats) / max(tg_n, 1)
+                            )
+                            cand_train_soft = (
+                                sum(b["soft"] * b["n_envs"] for b in tg_stats) / max(tg_n, 1)
+                            )
+                            tg_passed, tg_reason = train_gate_pass(
+                                cand_train_hard, cand_train_soft,
+                                agg_hard, agg_soft,
+                                metric=train_gate_metric,
+                                mixed_weight=train_gate_mixed_weight,
+                                **tg_tol_kwargs,
+                            )
+                        total_train_gate_time += time.time() - t_phase
+
+                        attempt_records.append({
+                            "attempt": attempt,
+                            "n_edits": len(ranked_items),
+                            "candidate_len": len(candidate_skill),
+                            "train_hard": round(cand_train_hard, 6),
+                            "train_soft": round(cand_train_soft, 6),
+                            "passed": tg_passed,
+                            "reason": tg_reason,
+                        })
+                        if tg_passed:
+                            usable_candidate = True
+                            print(f"    [5.5 TRAIN-GATE] attempt {attempt} PASSED: {tg_reason}")
+                            break
+                        print(f"    [5.5 TRAIN-GATE] attempt {attempt} REJECTED: {tg_reason}")
+                        attempt_feedback.append({
+                            "step": f"{global_step}·a{attempt}",
+                            "action": "attempt_rejected",
+                            "n_total": len(tg_results_all) or 1,
+                            "n_fail": sum(
+                                1 for r in tg_results_all
+                                if not r.get("hard") or float(r.get("hard", 0)) < 1e-9
+                            ),
+                            "failure_patterns": _extract_failure_patterns(
+                                tg_results_all, base_dir,
+                            ),
+                            "score_before": agg_hard,
+                            "score_after": cand_train_hard,
+                            "rejected_edits": [
+                                short_item_summary(item, update_mode)
+                                for item in ranked_items
+                                if isinstance(item, dict)
+                            ],
+                        })
+                        continue
+                    else:
+                        usable_candidate = True
+
+                # ── Post-attempt bookkeeping ──────────────────────────────
+                step_rec["timing"]["reflect_s"] = round(total_reflect_time, 1)
+                step_rec["timing"]["aggregate_s"] = round(total_aggregate_time, 1)
+                step_rec["timing"]["select_s"] = round(total_select_time, 1)
+                step_rec["timing"]["update_s"] = round(total_update_time, 1)
+                if use_train_gate:
+                    step_rec["train_gate"] = {
+                        "enabled": True,
+                        "metric": train_gate_metric,
+                        "tolerance": train_gate_tolerance,
+                        "tolerance_mode": (
+                            "fixed" if train_gate_tolerance >= 0 else "auto"
                         ),
-                        "skipped": sum(
-                            1 for row in apply_report if str(row.get("status", "")).startswith("skipped")
-                        ),
-                        "errors": sum(
-                            1 for row in apply_report if row.get("status") == "error"
-                        ),
+                        "tolerance_scale": train_gate_tolerance_scale,
+                        "effective_tolerances": {
+                            k: round(v, 6) for k, v in tg_tol_kwargs.items()
+                        },
+                        "attempts": attempt_records,
                     }
-                step_rec["timing"]["update_s"] = round(time.time() - t_phase, 1)
-                if (
-                    update_mode == "rewrite_from_suggestions"
-                    and rewrite_result is None
-                ) or (
-                    is_full_rewrite_minibatch_mode(update_mode)
-                    and rewrite_result is None
-                ):
+                    step_rec["timing"]["train_gate_s"] = round(total_train_gate_time, 1)
+
+                if not usable_candidate:
+                    # Every attempt was rejected by the train gate (or, with
+                    # the gate off, the single rewrite produced nothing).
+                    # Keep the skill unchanged and record why.
+                    action_label = skip_reason or "reject_train_gate"
+                    step_rec["action"] = action_label
+                    if action_label == "reject_train_gate":
+                        # Feed the cross-step buffer so the next step's
+                        # reflect knows why this step produced no update.
+                        last_rec = attempt_records[-1] if attempt_records else {}
+                        step_buffer.append({
+                            "step": global_step,
+                            "action": "reject_train_gate",
+                            "n_total": len(all_rollout_results) or 1,
+                            "n_fail": sum(
+                                1 for r in all_rollout_results
+                                if not r.get("hard") or float(r.get("hard", 0)) < 1e-9
+                            ),
+                            "failure_patterns": _extract_failure_patterns(
+                                all_rollout_results, step_dir,
+                            ),
+                            "score_before": agg_hard,
+                            "score_after": last_rec.get("train_hard"),
+                            "rejected_edits": [
+                                short_item_summary(item, update_mode)
+                                for item in ranked_items
+                                if isinstance(item, dict)
+                            ] if ranked_items else [],
+                        })
                     # Skill-aware: flush appendix notes before skipping (see
                     # the skip_no_patches branch above).
                     if use_skill_aware:
                         current_skill = _flush_skill_aware_appendix(
-                            current_skill, all_raw_patches, step_rec, step_dir, cfg,
+                            current_skill, flush_raw_patches, step_rec, step_dir, cfg,
                         )
-                    step_rec["action"] = "skip_no_rewrite"
                     step_rec["current_score"] = current_score
                     step_rec["best_score"] = best_score
                     step_rec["best_step"] = best_step
@@ -1499,12 +1875,11 @@ class ReflACTTrainer:
                     _persist_runtime_state(global_step)
                     with open(os.path.join(step_dir, "step_record.json"), "w", encoding="utf-8") as f:
                         json.dump(step_rec, f, indent=2, ensure_ascii=False)
-                    print("    [skip] no usable rewrite generated — skill unchanged")
+                    print(
+                        f"    [train-gate] all {n_attempts} attempt(s) rejected "
+                        f"— skill unchanged (action={action_label})"
+                    )
                     continue
-                print(
-                    f"    [5/6 UPDATE] "
-                    f"skill_len {len(current_skill)} -> {len(candidate_skill)}"
-                )
 
                 # ⑥ EVALUATE ───────────────────────────────────────────────
                 t_phase = time.time()
@@ -1591,8 +1966,11 @@ class ReflACTTrainer:
                     best_origin = current_origin
 
                 if use_skill_aware:
+                    # flush_raw_patches spans ALL attempts (original reflect
+                    # + every re-reflect), so retry appendix notes are not
+                    # lost; all_raw_patches holds only the last attempt's.
                     current_skill = _flush_skill_aware_appendix(
-                        current_skill, all_raw_patches, step_rec, step_dir, cfg,
+                        current_skill, flush_raw_patches, step_rec, step_dir, cfg,
                     )
 
                 if gate_metric == "hard":
@@ -2156,6 +2534,59 @@ class ReflACTTrainer:
             f"score={best_score:.4f}"
         )
 
+        # ── SkillProx backward: proximal shrink on the best skill ────────
+        # Post-training phase, strictly after best-skill selection and
+        # BEFORE the final test evaluation, so the shrunk skill (when
+        # accepted) gets its own valid_unseen measurement below.  The shrink
+        # runs on the selection split only — the test set stays untouched
+        # until the BEST/BASELINE/FINAL/PROX test rollouts below.
+        prox_summary = None
+        prox_skill = None
+        if use_prox_shrink:
+            try:
+                prox_result = run_prox_shrink(
+                    best_skill,
+                    adapter=adapter,
+                    build_eval_env=_build_eval_env,
+                    out_root=out_root,
+                    seed=seed,
+                    env_num=cfg["sel_env_num"],
+                    loo_env_num=prox_loo_env_num,
+                    max_trials=prox_max_trials,
+                    hard_tolerance=prox_hard_tolerance,
+                    soft_tolerance=prox_soft_tolerance,
+                    tolerance_scale=prox_tolerance_scale,
+                    max_compression=prox_max_compression,
+                    max_completion_tokens=optimizer_max_completion_tokens,
+                    adaptive_drill=prox_adaptive_drill,
+                    noise_gate=prox_noise_gate,
+                    sub_pack_chars=prox_sub_pack_chars,
+                    drill_budget=prox_drill_budget,
+                )
+                prox_summary = {
+                    k: prox_result.get(k)
+                    for k in (
+                        "shrunk", "base_chars", "final_chars", "compression",
+                        "base_hard", "base_soft", "final_hard", "final_soft",
+                    )
+                }
+                if prox_result.get("shrunk"):
+                    # Keep the original SkillOpt output layout: best_skill.md
+                    # stays the pre-prox training best.  ALL prox artifacts
+                    # live under prox_shrink/ (preshrink_skill.md,
+                    # final_skill.md, audit.json, LOO/trial evals, and the
+                    # post-shrink test eval below).
+                    prox_skill = prox_result["final_skill"]
+                    print(
+                        "  [prox] shrunk skill saved to prox_shrink/final_skill.md "
+                        f"({prox_result['base_chars']}->"
+                        f"{prox_result['final_chars']} chars, "
+                        f"{prox_result['compression']:.1%} compression); "
+                        "best_skill.md left untouched (pre-prox)"
+                    )
+            except Exception as _e:  # noqa: BLE001
+                print(f"\n  [prox shrink FAILED: {_e!r}] — keeping unshrunk best skill")
+
         # ── Final test evaluation (valid_unseen) ─────────────────────────
         baseline_test_hard = None
         baseline_test_soft = None
@@ -2163,6 +2594,8 @@ class ReflACTTrainer:
         test_soft = None
         final_test_hard = None
         final_test_soft = None
+        prox_test_hard = None
+        prox_test_soft = None
         final_selection_hard = None
         final_selection_soft = None
 
@@ -2368,6 +2801,50 @@ class ReflACTTrainer:
                 print(f"\n  [final skill test FAILED: {_e!r}] "
                       "— will be filled by post-hoc eval")
 
+            # Prox-shrunk skill on test set.  Evaluated only when prox
+            # accepted a shrink; results live INSIDE the prox folder so the
+            # original SkillOpt layout (test_eval / test_eval_final / ...)
+            # stays byte-identical with a prox-less run.
+            try:
+                if prox_skill is not None:
+                    print(f"\n{'='*60}")
+                    print("  PROX SKILL TEST — evaluate prox-shrunk skill on Test set (valid_unseen)")
+                    print(f"{'='*60}")
+                    test_env4, test_n4 = _build_eval_env(
+                        split="valid_unseen",
+                        env_num=cfg["test_env_num"],
+                        seed=seed,
+                    )
+                    print(f"  Test items: {test_n4}")
+                    prox_test_dir = os.path.join(out_root, "prox_shrink", "test_eval")
+                    os.makedirs(prox_test_dir, exist_ok=True)
+                    prox_test_results = adapter.rollout(test_env4, prox_skill, prox_test_dir)
+                    prox_test_hard, prox_test_soft = compute_score(prox_test_results)
+                    prox_buckets = _compute_task_type_buckets(prox_test_results, task_types)
+                    print("\n  === Prox Skill Test Results ===")
+                    for task_type in task_types + ["overall"]:
+                        b = prox_buckets.get(task_type, {"total": 0, "hard": 0})
+                        t = max(b["total"], 1)
+                        print(
+                            f"    {task_type:<40s}: "
+                            f"hard={b['hard']}/{b['total']}={b['hard']/t:.4f}"
+                        )
+                    with open(os.path.join(prox_test_dir, "summary.json"), "w", encoding="utf-8") as f:
+                        json.dump(
+                            {
+                                k: {
+                                    "total": b["total"],
+                                    "hard_acc": b["hard"] / max(b["total"], 1),
+                                }
+                                for k, b in prox_buckets.items()
+                            },
+                            f, indent=2, ensure_ascii=False,
+                        )
+            except Exception as _e:  # noqa: BLE001
+                prox_test_hard = None
+                prox_test_soft = None
+                print(f"\n  [prox skill test FAILED: {_e!r}]")
+
             # Comparison
             delta_hard = (test_hard or 0) - (baseline_test_hard or 0)
             print(f"\n  === Improvement vs baseline (init S_0) ===")
@@ -2380,6 +2857,12 @@ class ReflACTTrainer:
                 print(
                     f"    [3] final/last  hard: {baseline_test_hard:.4f} -> {final_test_hard:.4f}  "
                     f"(delta={final_delta_hard:+.4f})"
+                )
+            if prox_test_hard is not None:
+                prox_delta_hard = (prox_test_hard or 0) - (baseline_test_hard or 0)
+                print(
+                    f"    [4] prox shrunk hard: {baseline_test_hard:.4f} -> {prox_test_hard:.4f}  "
+                    f"(delta={prox_delta_hard:+.4f})"
                 )
 
         # ── Global summary ───────────────────────────────────────────────
@@ -2438,6 +2921,14 @@ class ReflACTTrainer:
                 if final_test_hard is not None
                 else None
             ),
+            "prox_test_hard": prox_test_hard,
+            "prox_test_soft": prox_test_soft,
+            "prox_test_delta_hard": (
+                (prox_test_hard or 0) - (baseline_test_hard or 0)
+                if prox_test_hard is not None
+                else None
+            ),
+            "prox_shrink": prox_summary,
             "total_wall_time_s": round(total_wall, 1),
             "token_summary": token_summary,
         }

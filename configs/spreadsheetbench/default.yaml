@@ -28,7 +28,7 @@ env:
   split_output_dir: ""
   data_root: data/spreadsheetbench_verified_400
   mode: multi
-  max_turns: 10
+  max_turns: 30
   max_completion_tokens: 16384
-  exec_timeout: 100
-  workers: 12
+  exec_timeout: 600
+  workers: 24
