@@ -1,0 +1,111 @@
+scripts/remote_net_probe2.sh
+  s_092bd3a4ac3f06::t_e5b3e249862f9c 1-13
+scripts/probe_latency.py
+  s_092bd3a4ac3f06::t_a4f07da7c5b100 1-26,28,30-39,41-131
+  s_092bd3a4ac3f06::t_c482d11de40d77 27,29
+  s_092bd3a4ac3f06::t_c84f30e606bd61 40
+scripts/materialize_officeqa.py
+  s_092bd3a4ac3f06::t_b80a51b6b53b88 1-145
+scripts/probe_multikey.py
+  s_092bd3a4ac3f06::t_e7e50f9d2524aa 1-156
+scripts/probe_36.py
+  s_092bd3a4ac3f06::t_34f2ef30fe4159 1-65
+skillopt/optimizer/slow_update.py
+  s_092bd3a4ac3f06::t_7e0013d409fdc1 240-297,307-354,356-361,373-376,379,401-402,411-418
+  h_4d4cc0d7ef2df6 355
+scripts/probe_api.py
+  s_092bd3a4ac3f06::t_2ee6df9b3352ff 1-32
+configs/_base_/default.yaml
+  h_4d4cc0d7ef2df6 10-12,19,21,25
+  s_092bd3a4ac3f06::t_80d8c1a8f95457 106-107
+  s_092bd3a4ac3f06::t_14a85db24ad8cc 70
+scripts/askpass.sh
+  s_092bd3a4ac3f06::t_f36efbf89ca9a3 1-2
+scripts/verify_token_budget_real.py
+  s_092bd3a4ac3f06::t_521984722a0863 1-50
+scripts/train.py
+  s_092bd3a4ac3f06::t_852d200431a528 745-775,780-781
+  s_092bd3a4ac3f06::t_e4a4a6d605bb95 461
+  s_092bd3a4ac3f06::t_6af6e153c8796f 806
+scripts/probe_analyst_8traj.py
+  s_092bd3a4ac3f06::t_6dd4559b61511a 1-118
+scripts/verify_token_budget.py
+  s_092bd3a4ac3f06::t_62322bbf23372d 38,46-49,76-77,79-80,91-92,95,120-123,125-126
+  s_092bd3a4ac3f06::t_ee544cf845f0ae 21,28-29
+  s_092bd3a4ac3f06::t_47a35e57bfe463 1-20,22-27,30-37,39-45,50-75,78,81-90,93-94,96-119,124,127-128
+configs/officeqa/default.yaml
+  s_092bd3a4ac3f06::t_f5a8e00f5c0b67 24
+scripts/probe_optimizer_response.py
+  s_092bd3a4ac3f06::t_ea51bb815e712d 76
+  s_092bd3a4ac3f06::t_2c74dbe181c8bf 82
+  s_092bd3a4ac3f06::t_2f8f252779e589 1-75,77-81,83-119
+scripts/probe_concurrent.py
+  s_092bd3a4ac3f06::t_61a1dfefb1d3ef 1-180
+skillopt/config.py
+  s_092bd3a4ac3f06::t_352ae740ce131c 147
+"docs2/creation/Meta Skill.md"
+  s_092bd3a4ac3f06::t_3f89dc37791071 1-76
+docs2/creation/CCE_Reflect.md
+  h_4d4cc0d7ef2df6 2-4,6-7,9-11,14-16,18-25,28,31-32,92
+skillopt/engine/trainer.py
+  s_092bd3a4ac3f06::t_5ee782e8303e97 55
+  s_092bd3a4ac3f06::t_40977f8c113fa4 872-877
+scripts/remote_env_probe.sh
+  s_092bd3a4ac3f06::t_3fc66d4d4c4af9 1-19
+scripts/probe_analyst_real.py
+  s_092bd3a4ac3f06::t_fa3b3d730d8bff 1-128
+scripts/verify_slow_update_cap.py
+  s_092bd3a4ac3f06::t_cdda8c120ad0cd 9-15,17-19
+  s_092bd3a4ac3f06::t_37b6a7b25d78ed 35
+  s_092bd3a4ac3f06::t_a95a0b0b1bb842 16
+  s_092bd3a4ac3f06::t_8c15b067d6abbd 22,24-25
+  s_092bd3a4ac3f06::t_ccf8b0a94c7b22 1-8,20-21,23,26-34,36-37
+scripts/remote_net_probe.sh
+  s_092bd3a4ac3f06::t_c467e605dd6442 1-12
+scripts/analyze_hard_soft.py
+  s_092bd3a4ac3f06::t_c2205233bb1371 1-98
+docs2/creation/skillprox_feasibility.md
+  h_4d4cc0d7ef2df6 567-969
+docs2/creation/slow_update.md
+  s_092bd3a4ac3f06::t_9ef50ae72ab5e7 41-108
+  s_092bd3a4ac3f06::t_a59673c4ce0426 1-40
+skillopt/model/openai_compatible_backend.py
+  s_092bd3a4ac3f06::t_f64baff567a2c1 27
+  s_092bd3a4ac3f06::t_31ea5a007d3c11 105-113,119-130,137-156,160-166,168-176,181-182,186-190
+scripts/askpass.bat
+  s_092bd3a4ac3f06::t_f3733a4712d119 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.2",
+  "base_commit_sha": "18b103d16246b830417804e231f848aadac52961",
+  "prompts": {},
+  "humans": {
+    "h_4d4cc0d7ef2df6": {
+      "author": "lihaitao <1761864532@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_092bd3a4ac3f06": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a8938866d00dde861740ed0",
+        "model": "GLM-5.2"
+      },
+      "human_author": "lihaitao <1761864532@qq.com>",
+      "custom_attributes": {
+        "tool_use_id": "6a8c25076d00dde86174196d",
+        "external_session_id": "6a8938866d00dde861740ed0",
+        "client_type": "ide",
+        "tool_id": "icube:applyChatSnapshotPatch",
+        "edit_kind": "file_edit",
+        "operation_id": "6a8c25076d00dde86174196d",
+        "session_id": "6a8938866d00dde861740ed0",
+        "runtime_client": "trae-tob-git-ai",
+        "dedupe_key": "6a8938866d00dde861740ed0:6a8c25076d00dde86174196d:afterEdit:9f883af6",
+        "source_scene": "agent",
+        "tool_type": "builtin"
+      }
+    }
+  }
+}
