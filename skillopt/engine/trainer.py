@@ -52,6 +52,7 @@ from skillopt.optimizer.skill_aware import (
 )
 from skillopt.optimizer.slow_update import (
     build_comparison_pairs,
+    configure_slow_update_token_budget,
     extract_slow_update_field,
     inject_empty_slow_update_field,
     replace_slow_update_field,
@@ -867,6 +868,12 @@ class ReflACTTrainer:
             lr_control_mode = "none"
         longitudinal_pair_policy = _normalise_longitudinal_pair_policy(
             cfg.get("longitudinal_pair_policy", "mixed")
+        )
+        # Comparison-text token budget for slow_update/meta_skill. Trajectories
+        # are evicted by importance (improved→persistent_fail→regressed, long
+        # first) until the text fits; 0 disables enforcement.
+        configure_slow_update_token_budget(
+            int(cfg.get("slow_update_max_prompt_tokens", 200_000))
         )
         rewrite_reasoning_effort = cfg.get("rewrite_reasoning_effort", "high")
         if rewrite_reasoning_effort == "":

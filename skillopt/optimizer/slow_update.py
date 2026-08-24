@@ -237,8 +237,64 @@ def save_comparison_pairs(pairs: list[dict], out_path: str) -> None:
         json.dump(slim, f, ensure_ascii=False, indent=2)
 
 
-def format_comparison_text(pairs: list[dict]) -> str:
-    """Format structured comparison pairs into optimizer-readable text."""
+# ── Prompt token budget for comparison text ──────────────────────────────
+# When the full comparison text exceeds this many tokens, trajectories are
+# evicted by importance (least important first) until it fits. Metadata
+# (task/score/answer/fail_reason) is always retained. Configurable via the
+# `optimizer.slow_update_max_prompt_tokens` yaml key; 0 disables the budget.
+_SLOW_UPDATE_PROMPT_TOKEN_BUDGET = 200_000
+
+
+def configure_slow_update_token_budget(max_tokens: int | None) -> None:
+    """Override the comparison-text token budget. 0 disables budget enforcement."""
+    if max_tokens is not None:
+        _SLOW_UPDATE_TOKEN_BUDGET_STATE["max_tokens"] = max(0, int(max_tokens))
+
+
+_SLOW_UPDATE_TOKEN_BUDGET_STATE = {"max_tokens": _SLOW_UPDATE_PROMPT_TOKEN_BUDGET}
+
+# Cached tiktoken encoder; False marks "unavailable → char/4 fallback".
+_TIKTOKEN_ENC: object | bool | None = None
+
+
+def _get_token_encoder():
+    global _TIKTOKEN_ENC
+    if _TIKTOKEN_ENC is None:
+        try:
+            import tiktoken
+            _TIKTOKEN_ENC = tiktoken.get_encoding("cl100k_base")
+        except Exception:
+            _TIKTOKEN_ENC = False
+    return _TIKTOKEN_ENC
+
+
+def _count_tokens(text: str) -> int:
+    """Estimate token count. Uses tiktoken if available, else len(text)//4."""
+    enc = _get_token_encoder()
+    if enc is False:
+        return len(text) // 4
+    return len(enc.encode(text))
+
+
+def format_comparison_text(
+    pairs: list[dict],
+    max_tokens: int | None = None,
+) -> str:
+    """Format structured comparison pairs into optimizer-readable text.
+
+    When ``max_tokens`` is provided and the full text exceeds it, trajectories
+    are evicted by importance (improved → persistent_fail → regressed, long
+    trajectories first within each category) until the text fits. Metadata is
+    always retained for evicted entries; only the trajectory blocks are
+    dropped. A sentinel "(trajectory omitted to fit context window)" note
+    replaces the trajectory so the optimizer knows the entry exists.
+    """
+    budget = (
+        _SLOW_UPDATE_TOKEN_BUDGET_STATE["max_tokens"]
+        if max_tokens is None
+        else max(0, int(max_tokens))
+    )
+
     by_cat: dict[str, list[dict]] = {
         "regressed": [],
         "persistent_fail": [],
@@ -248,6 +304,61 @@ def format_comparison_text(pairs: list[dict]) -> str:
     for p in pairs:
         by_cat.setdefault(p["category"], []).append(p)
 
+    # Per-entry trajectory visibility. Stable successes never show trajectories
+    # (source behavior). Others start visible; evictions flip them off.
+    show_traj: dict[str, bool] = {}
+    for p in pairs:
+        pid = str(p.get("id", ""))
+        show_traj[pid] = p.get("category") != "stable_success"
+
+    text = _render_comparison(pairs, by_cat, show_traj)
+    if budget <= 0:
+        return text
+    if _count_tokens(text) <= budget:
+        return text
+
+    # Eviction order: least important category first; within a category, the
+    # entry whose combined trajectory is longest is evicted first (yields the
+    # largest token reduction per step → fastest convergence).
+    eviction_order: list[dict] = []
+    for cat in ("improved", "persistent_fail", "regressed"):
+        cat_entries = sorted(
+            by_cat.get(cat, []),
+            key=lambda e: len(e.get("prev_trajectory", "")) + len(e.get("curr_trajectory", "")),
+            reverse=True,
+        )
+        eviction_order.extend(cat_entries)
+
+    omitted_count = 0
+    for entry in eviction_order:
+        pid = str(entry.get("id", ""))
+        if not show_traj.get(pid, False):
+            continue  # already off (e.g. empty trajectory)
+        show_traj[pid] = False
+        omitted_count += 1
+        text = _render_comparison(pairs, by_cat, show_traj)
+        if _count_tokens(text) <= budget:
+            print(
+                f"    [slow_update] evicted {omitted_count} trajectory block(s) "
+                f"to fit {budget} token budget"
+            )
+            return text
+
+    # Every evictable trajectory dropped and still over budget.
+    raise RuntimeError(
+        f"slow_update comparison text still exceeds {budget} tokens after "
+        f"evicting all {omitted_count} evictable trajectories "
+        f"(current ~{_count_tokens(text)} tokens). "
+        f"Reduce `optimizer.slow_update_samples`."
+    )
+
+
+def _render_comparison(
+    pairs: list[dict],
+    by_cat: dict[str, list[dict]],
+    show_traj: dict[str, bool],
+) -> str:
+    """Render the comparison text honoring per-entry trajectory visibility."""
     total = len(pairs)
     parts = [
         f"## Longitudinal Comparison Summary\n"
@@ -259,13 +370,13 @@ def format_comparison_text(pairs: list[dict]) -> str:
     ]
 
     categories = [
-        ("regressed", "Regressions (right→wrong) — HIGHEST PRIORITY", True),
-        ("persistent_fail", "Persistent Failures (wrong→wrong)", True),
-        ("improved", "Improvements (wrong→right)", True),
-        ("stable_success", "Stable Successes (right→right)", False),
+        ("regressed", "Regressions (right→wrong) — HIGHEST PRIORITY"),
+        ("persistent_fail", "Persistent Failures (wrong→wrong)"),
+        ("improved", "Improvements (wrong→right)"),
+        ("stable_success", "Stable Successes (right→right)"),
     ]
 
-    for cat_key, label, show_traj in categories:
+    for cat_key, label in categories:
         entries = by_cat[cat_key]
         if not entries:
             parts.append(f"### {label}\n(none)\n")
@@ -287,7 +398,8 @@ def format_comparison_text(pairs: list[dict]) -> str:
             if prev.get("fail_reason") and not prev["hard"]:
                 lines.append(f"- Prev fail reason: {prev['fail_reason']}")
 
-            if show_traj:
+            pid = str(e.get("id", ""))
+            if show_traj.get(pid, False):
                 if e.get("prev_trajectory"):
                     lines.append(
                         f"\n**Previous epoch trajectory:**\n```\n{e['prev_trajectory']}\n```"
@@ -296,6 +408,14 @@ def format_comparison_text(pairs: list[dict]) -> str:
                     lines.append(
                         f"\n**Current epoch trajectory:**\n```\n{e['curr_trajectory']}\n```"
                     )
+            elif cat_key != "stable_success" and (
+                e.get("prev_trajectory") or e.get("curr_trajectory")
+            ):
+                # Evicted non-stable entry: leave a sentinel so the optimizer
+                # knows the trajectory existed but was dropped for budget.
+                lines.append(
+                    "\n*(trajectory omitted to fit context window)*"
+                )
 
         parts.append("\n".join(lines))
 

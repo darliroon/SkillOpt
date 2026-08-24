@@ -21,7 +21,7 @@ env:
   split_dir: data/officeqa_split
   data_dirs:
     - data/officeqa_docs_official
-  workers: 4
+  workers: 36  # 3 keys x 12 per key, tested safe with gpt-5.6-sol
   max_tool_turns: 24
   max_completion_tokens: 16384
   search_mode: offline

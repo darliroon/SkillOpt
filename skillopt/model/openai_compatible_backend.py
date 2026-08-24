@@ -24,6 +24,7 @@ it can be selected as the optimizer and/or target backend and routed through
 """
 from __future__ import annotations
 
+import itertools
 import os
 import threading
 import time
@@ -101,45 +102,92 @@ tracker = TokenTracker()
 _optimizer_client: OpenAI | None = None
 _target_client: OpenAI | None = None
 
+# Multi-key round-robin pool: when the configured api_key contains commas
+# (e.g. "sk-key1,sk-key2,sk-key3"), we build one client per key and rotate
+# across calls.  This spreads load when a single key has RPM/TPM limits.
+_optimizer_clients: list[OpenAI] = []
+_target_clients: list[OpenAI] = []
+_optimizer_cycle: itertools.cycle | None = None
+_target_cycle: itertools.cycle | None = None
+_cycle_lock = threading.Lock()
+
 
 def _config_for(role: str) -> OpenAICompatibleConfig:
     return OPTIMIZER_CONFIG if role == "optimizer" else TARGET_CONFIG
 
 
-def _build_client(config: OpenAICompatibleConfig) -> OpenAI:
+def _parse_keys(raw: str) -> list[str]:
+    """Parse comma-separated API keys into a de-duplicated list."""
+    seen: list[str] = []
+    for k in raw.split(","):
+        k = k.strip()
+        if k and k not in seen:
+            seen.append(k)
+    return seen
+
+
+def _build_clients(config: OpenAICompatibleConfig) -> list[OpenAI]:
+    """Build one client per API key for round-robin load balancing."""
     base_url = config.base_url.rstrip("/")
     if not base_url:
         raise ValueError(
             "OpenAI-compatible base_url is not configured — "
             "set openai_compatible_base_url (or optimizer/target-specific) in config"
         )
-    return OpenAI(
-        base_url=base_url,
-        # Some OpenAI-compatible servers (Ollama, vLLM, local proxies) do not
-        # require an API key. The SDK still expects a non-empty string, so fall
-        # back to a harmless placeholder when none is configured.
-        api_key=config.api_key or "dummy",
-        timeout=config.timeout_seconds,
-    )
+    keys = _parse_keys(config.api_key) if config.api_key else []
+    if not keys:
+        keys = ["dummy"]
+    return [
+        OpenAI(base_url=base_url, api_key=k, timeout=config.timeout_seconds)
+        for k in keys
+    ]
+
+
+def _ensure_clients(role: str) -> None:
+    """Lazily build the client pool (one client per key)."""
+    global _optimizer_clients, _target_clients
+    global _optimizer_cycle, _target_cycle
+    with _cycle_lock:
+        if role == "optimizer" and not _optimizer_clients:
+            _optimizer_clients = _build_clients(OPTIMIZER_CONFIG)
+            _optimizer_cycle = itertools.cycle(_optimizer_clients)
+        elif role == "target" and not _target_clients:
+            _target_clients = _build_clients(TARGET_CONFIG)
+            _target_cycle = itertools.cycle(_target_clients)
 
 
 def _get_client(role: str) -> OpenAI:
-    global _optimizer_client, _target_client
-    with _client_lock:
+    """Return the next client in the round-robin cycle.
+
+    Falls back to the single-client path when only one key is configured,
+    preserving the original lazy-init behaviour.
+    """
+    _ensure_clients(role)
+    with _cycle_lock:
         if role == "optimizer":
-            if _optimizer_client is None:
-                _optimizer_client = _build_client(OPTIMIZER_CONFIG)
-            return _optimizer_client
-        if _target_client is None:
-            _target_client = _build_client(TARGET_CONFIG)
-        return _target_client
+            if _optimizer_cycle is not None:
+                return next(_optimizer_cycle)
+        elif _target_cycle is not None:
+            return next(_target_cycle)
+    # Fallback (should not be reached, but keeps the signature safe)
+    _ensure_clients(role)
+    if role == "optimizer":
+        return _optimizer_clients[0]
+    return _target_clients[0]
 
 
 def _reset_clients() -> None:
     global _optimizer_client, _target_client
+    global _optimizer_clients, _target_clients
+    global _optimizer_cycle, _target_cycle
     with _client_lock:
         _optimizer_client = None
         _target_client = None
+    with _cycle_lock:
+        _optimizer_clients = []
+        _target_clients = []
+        _optimizer_cycle = None
+        _target_cycle = None
 
 
 def count_tokens(text: str, model: str | None = None) -> int:

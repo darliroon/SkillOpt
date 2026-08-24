@@ -458,6 +458,7 @@ _LEGACY_TO_STRUCTURED: dict[str, str] = {
     "skill_update_mode": "optimizer.skill_update_mode",
     "use_slow_update": "optimizer.use_slow_update",
     "slow_update_samples": "optimizer.slow_update_samples",
+    "slow_update_max_prompt_tokens": "optimizer.slow_update_max_prompt_tokens",
     "longitudinal_pair_policy": "optimizer.longitudinal_pair_policy",
     "use_meta_skill": "optimizer.use_meta_skill",
     "use_skill_aware_reflection": "optimizer.use_skill_aware_reflection",
@@ -741,9 +742,42 @@ def load_config(args: argparse.Namespace) -> dict:
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
+class _Tee:
+    """Duplicate stream writes to the console and a log file."""
+
+    def __init__(self, stream, log_file):
+        self._stream = stream
+        self._log_file = log_file
+
+    def write(self, data):
+        self._stream.write(data)
+        self._log_file.write(data)
+
+    def flush(self):
+        self._stream.flush()
+        self._log_file.flush()
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
+def _mirror_console_to_log(out_root: str) -> str:
+    """Mirror console output to logs/<run_name>.log, named after the run's output folder."""
+    run_name = os.path.basename(str(out_root).rstrip("/\\"))
+    log_dir = os.path.join(_PROJECT_ROOT, "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = os.path.join(log_dir, f"{run_name}.log")
+    log_file = open(log_path, "a", encoding="utf-8", buffering=1, errors="replace")
+    sys.stdout = _Tee(sys.stdout, log_file)
+    sys.stderr = _Tee(sys.stderr, log_file)
+    return log_path
+
+
 def main() -> None:
     args = parse_args()
     cfg = load_config(args)
+
+    log_path = _mirror_console_to_log(cfg["out_root"])
 
     print(f"\n{'='*60}")
     print(f"  SkillOpt — Executive Strategy for Self-Evolving Agent Skills")
@@ -769,6 +803,7 @@ def main() -> None:
     print(f"  skill_aware_reflection: {cfg.get('use_skill_aware_reflection', False)}")
     print(f"  slow_update:    {cfg.get('use_slow_update', False)}")
     print(f"  out_root:       {cfg.get('out_root')}")
+    print(f"  log_file:       {log_path}")
     print(f"{'='*60}\n")
 
     # Build adapter

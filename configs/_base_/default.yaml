@@ -7,21 +7,22 @@ model:
   optimizer_backend: openai_compatible
   target_backend: openai_compatible
   # Leave optimizer_* / target_* blank to use the shared value.
-  openai_compatible_base_url: "http://113.46.219.251:8080/v1"
-  openai_compatible_api_key: "sk-6Vi_7BS_IuofzkYt8t2B9w"
+  openai_compatible_base_url: "https://yibuapi.com/v1/"
+  openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
+  # 多 key 轮询：逗号分隔多个 key 即可，如 "sk-key1,sk-key2,sk-key3"
   # openai_compatible_api_key: "sk-aKvB_bgo8FfKyykyFaW8DQ"
 
   # optimizer: GLM-5.2
   # optimizer_openai_compatible_base_url: "http://113.46.219.251:8080/v1"   # blank = use shared
   # optimizer_openai_compatible_api_key: "sk-6Vi_7BS_IuofzkYt8t2B9w"
   # optimizer_openai_compatible_api_key: "sk-aKvB_bgo8FfKyykyFaW8DQ"
-  optimizer: gpt-5.2
+  optimizer: gpt-5.6-sol
   optimizer_openai_compatible_base_url: "https://yibuapi.com/v1/"   # blank = use shared
-  optimizer_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex"
+  optimizer_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
   # target: gpt-4o
-  target: gpt-5.2
+  target: gpt-5.6-sol
   target_openai_compatible_base_url: "https://yibuapi.com/v1/"      # blank = use shared
-  target_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex"
+  target_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
 
 
   # 在 azure_openai.py#L380-L412 中真正生效:作为 reasoning = {"effort": ...} (Responses API)或 
@@ -66,6 +67,7 @@ optimizer:
   skill_update_mode: patch  # patch / rewrite_from_suggestions / full_rewrite_minibatch
   use_slow_update: true
   slow_update_samples: 20
+  slow_update_max_prompt_tokens: 200000   # 比较文本的 token 软上限; 超限时按重要性(improved→persistent_fail→regressed, 类内长轨迹优先)逐条剔除轨迹, metadata 永远保留; 0 = 关闭
   slow_update_gate_with_selection: false
   longitudinal_pair_policy: mixed  # mixed / changed / unchanged
   use_meta_skill: true
@@ -101,6 +103,8 @@ optimizer:
 
 evaluation:
   use_gate: true
+  gate_metric: hard        # hard / soft / mixed; mixed 用 gate_mixed_weight 加权
+  gate_mixed_weight: 0.5   # 仅 gate_metric=mixed 时生效
   sel_env_num: 0
   test_env_num: 0
   eval_test: true
