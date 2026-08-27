@@ -1,0 +1,18 @@
+configs/alfworld/default.yaml
+  h_4d4cc0d7ef2df6 5,31-32
+configs/_base_/default.yaml
+  h_4d4cc0d7ef2df6 148-154
+.gitignore
+  h_4d4cc0d7ef2df6 73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.2",
+  "base_commit_sha": "951bd91a097580056bc6fe4efd541923f1ba7a4f",
+  "prompts": {},
+  "humans": {
+    "h_4d4cc0d7ef2df6": {
+      "author": "lihaitao <1761864532@qq.com>"
+    }
+  }
+}
