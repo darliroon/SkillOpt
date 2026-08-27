@@ -70,3 +70,4 @@ uv.lock
 smoke_results/
 .cache/
 scripts/
+output/

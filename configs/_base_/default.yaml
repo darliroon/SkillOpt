@@ -145,6 +145,13 @@ env:
   claude_code_exec_effort: medium
   claude_code_exec_max_thinking_tokens: 16384
 
+  jiuwen_exec_provider: openai          # LLM provider for Jiuwen agent-core-rust backend
+  jiuwen_exec_api_key: ""               # blank = reuse target_openai_compatible_api_key
+  jiuwen_exec_api_base: ""              # blank = reuse target_openai_compatible_base_url
+  jiuwen_exec_verify_ssl: false
+  jiuwen_exec_max_iterations: 8         # max ReAct agent tool-call iterations
+  jiuwen_exec_empty_response_retries: 5  # retries when agent returns empty response
+
 
   cursor_exec_path: ""       # blank uses CURSOR_EXEC_PATH or cursor-agent
   cursor_exec_sandbox: ""    # blank uses CURSOR_EXEC_SANDBOX or enabled

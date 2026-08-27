@@ -149,12 +149,12 @@ def get_optimizer_backend() -> str:
 def set_target_backend(backend: str) -> None:
     global TARGET_BACKEND
     TARGET_BACKEND = normalize_backend_name(backend or "openai_chat")
-    if TARGET_BACKEND not in {"openai_chat", "claude_chat", "qwen_chat", "minimax_chat", "openai_compatible", "copilot_chat", "codex_exec", "claude_code_exec", "cursor_exec", "copilot_exec"}:
+    if TARGET_BACKEND not in {"openai_chat", "claude_chat", "qwen_chat", "minimax_chat", "openai_compatible", "copilot_chat", "codex_exec", "claude_code_exec", "cursor_exec", "copilot_exec", "jiuwen_exec"}:
         raise ValueError(
             f"Unsupported target backend: {TARGET_BACKEND!r}. "
             "Supported values are 'openai_chat', 'claude_chat', 'qwen_chat', 'minimax_chat', "
             "'openai_compatible', 'copilot_chat', 'codex_exec', 'claude_code_exec', "
-            "'cursor_exec', and 'copilot_exec'."
+            "'cursor_exec', 'copilot_exec', and 'jiuwen_exec'."
         )
     os.environ["TARGET_BACKEND"] = TARGET_BACKEND
 
@@ -164,7 +164,7 @@ def get_target_backend() -> str:
 
 
 def is_target_exec_backend() -> bool:
-    return TARGET_BACKEND in {"codex_exec", "claude_code_exec", "cursor_exec", "copilot_exec"}
+    return TARGET_BACKEND in {"codex_exec", "claude_code_exec", "cursor_exec", "copilot_exec", "jiuwen_exec"}
 
 
 def is_optimizer_chat_backend() -> bool:
@@ -506,3 +506,63 @@ def get_copilot_chat_config() -> dict[str, str | int]:
         "target_model": COPILOT_CHAT_TARGET_MODEL,
         "timeout": int(timeout),
     }
+
+
+# ---------------------------------------------------------------------------
+# Jiuwen (agent-core-rust) exec backend configuration
+# ---------------------------------------------------------------------------
+def configure_jiuwen_exec(
+    *,
+    provider: str | None = None,
+    api_key: str | None = None,
+    api_base: str | None = None,
+    verify_ssl: bool | None = None,
+    max_iterations: int | None = None,
+    empty_response_retries: int | None = None,
+) -> None:
+    """Configure the Jiuwen (agent-core-rust) exec backend."""
+    try:
+        from skillopt.model.jiuwen_backend import configure_jiuwen_exec as _configure
+        _configure(
+            provider=provider, api_key=api_key,
+            api_base=api_base, verify_ssl=verify_ssl,
+            max_iterations=max_iterations,
+            empty_response_retries=empty_response_retries,
+        )
+    except ImportError:
+        pass
+
+
+def get_jiuwen_exec_config() -> dict[str, Any]:
+    try:
+        from skillopt.model.jiuwen_backend import get_jiuwen_exec_config as _get
+        return _get()
+    except ImportError:
+        return {}
+
+
+def configure_jiuwen_exec_from_config(config: Mapping[str, Any]) -> None:
+    """Configure Jiuwen exec from a flattened train/eval configuration.
+
+    ``jiuwen_exec_*`` keys take precedence; when blank, the target LLM API
+    config (``target_openai_compatible_*`` / ``openai_compatible_*``) is used
+    as fallback so that users only need to set the API key/base once.
+    """
+    configure_jiuwen_exec(
+        provider=_first_nonempty(config, "jiuwen_exec_provider"),
+        api_key=_first_nonempty(
+            config,
+            "jiuwen_exec_api_key",
+            "target_openai_compatible_api_key",
+            "openai_compatible_api_key",
+        ),
+        api_base=_first_nonempty(
+            config,
+            "jiuwen_exec_api_base",
+            "target_openai_compatible_base_url",
+            "openai_compatible_base_url",
+        ),
+        verify_ssl=config.get("jiuwen_exec_verify_ssl"),
+        max_iterations=config.get("jiuwen_exec_max_iterations"),
+        empty_response_retries=config.get("jiuwen_exec_empty_response_retries"),
+    )

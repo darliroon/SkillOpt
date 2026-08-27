@@ -31,6 +31,10 @@ _BACKEND_DEFAULT_MODELS = {
     "qwen_chat": "Qwen/Qwen3.5-4B",
     "minimax_chat": "MiniMax-M2.7",
     "openai_compatible": "gpt-4o-mini",
+    # jiuwen_exec is a generic exec backend that uses the openai_compatible
+    # API path; no model is hardwired — the actual model always comes from
+    # the yaml ``target`` field or the --target_model CLI flag.
+    "jiuwen_exec": "gpt-4o-mini",
 }
 
 _BACKEND_ALIASES = {
@@ -61,6 +65,8 @@ _BACKEND_ALIASES = {
     "openai_compatible_chat": "openai_compatible",
     "openai-compatible": "openai_compatible",
     "compat": "openai_compatible",
+    "jiuwen": "jiuwen_exec",
+    "jiuwen_exec": "jiuwen_exec",
 }
 
 

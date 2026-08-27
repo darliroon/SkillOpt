@@ -40,6 +40,7 @@ from skillopt.model import (
     configure_openai_compatible,
     configure_minimax_chat,
     configure_qwen_chat,
+    configure_jiuwen_exec,
     set_optimizer_backend,
     set_optimizer_deployment,
     set_reasoning_effort,
@@ -401,6 +402,9 @@ def main() -> None:
         elif backend == "openai_compatible":
             _set_role("optimizer_backend", "openai_compatible")
             _set_role("target_backend", "openai_compatible")
+        elif backend == "jiuwen_exec":
+            _set_role("optimizer_backend", "openai_chat")
+            _set_role("target_backend", "jiuwen_exec")
         else:
             _set_role("optimizer_backend", "openai_chat")
             _set_role("target_backend", "openai_chat")
@@ -516,6 +520,12 @@ def main() -> None:
         optimizer_model=cfg.get("copilot_chat_optimizer_model") or None,
         target_model=cfg.get("copilot_chat_target_model") or None,
         timeout=cfg.get("copilot_chat_timeout") or None,
+    )
+    configure_jiuwen_exec(
+        provider=cfg.get("jiuwen_provider") or None,
+        api_key=cfg.get("jiuwen_api_key") or None,
+        api_base=cfg.get("jiuwen_api_base") or None,
+        max_iterations=cfg.get("jiuwen_max_iterations") or None,
     )
     configure_openai_compatible(
         base_url=cfg.get("openai_compatible_base_url") or None,

@@ -74,6 +74,7 @@ from skillopt.model import (
     configure_copilot_chat,
     configure_copilot_exec,
     configure_cursor_exec,
+    configure_jiuwen_exec_from_config,
     configure_minimax_chat,
     configure_openai_compatible,
     configure_qwen_chat,
@@ -691,6 +692,7 @@ class ReflACTTrainer:
         set_optimizer_backend(optimizer_backend)
         set_target_backend(target_backend)
         configure_codex_exec_from_config(cfg)
+        configure_jiuwen_exec_from_config(cfg)
 
         # ── Adapter setup (one-time init) ────────────────────────────
         adapter.setup(cfg)
