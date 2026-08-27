@@ -18,11 +18,14 @@ from skillopt.model.backend_config import (  # noqa: F401
     configure_copilot_chat,
     configure_copilot_exec,
     configure_cursor_exec,
+    configure_jiuwen_exec,
+    configure_jiuwen_exec_from_config,
     get_claude_code_exec_config,
     get_codex_exec_config,
     get_copilot_chat_config,
     get_copilot_exec_config,
     get_cursor_exec_config,
+    get_jiuwen_exec_config,
     get_optimizer_backend,
     get_target_backend,
     is_optimizer_chat_backend,
@@ -84,6 +87,10 @@ def set_backend(name: str | None) -> str:
         set_optimizer_backend("openai_compatible")
         set_target_backend("openai_compatible")
         return "openai_compatible"
+    if normalized == "jiuwen_exec":
+        set_optimizer_backend("openai_chat")
+        set_target_backend("jiuwen_exec")
+        return "jiuwen_exec"
     raise ValueError(f"Unsupported legacy backend: {name!r}")
 
 
@@ -109,6 +116,8 @@ def get_backend_name() -> str:
         return "cursor_exec"
     if optimizer == "openai_chat" and target == "copilot_exec":
         return "copilot_exec"
+    if optimizer == "openai_chat" and target == "jiuwen_exec":
+        return "jiuwen_exec"
     if optimizer == "openai_compatible" and target == "openai_compatible":
         return "openai_compatible"
     return f"{optimizer}+{target}"

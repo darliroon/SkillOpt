@@ -30,3 +30,4 @@ env:
   max_completion_tokens: 16384
   workers: 16
   limit: 0
+  exec_timeout: 300

@@ -138,10 +138,18 @@ def fmt_minibatch_trajectories(
     parts: list[str] = []
     for idx, item in enumerate(items, 1):
         tid = str(item["id"])
-        # Rollout writes per-task dirs with filesystem-safe ids (on Windows a
-        # ':' in a path segment is illegal), so mirror that sanitisation here.
-        safe_tid = tid.replace(":", "-")
-        conv_path = os.path.join(prediction_dir, safe_tid, "conversation.json")
+        # Try the original id first (rollout writes dirs with the raw id),
+        # then fall back to a colon-sanitised variant for Windows safety.
+        base_dir = os.path.join(prediction_dir, tid)
+        if not os.path.exists(base_dir):
+            safe_tid = tid.replace(":", "-")
+            if safe_tid != tid:
+                base_dir = os.path.join(prediction_dir, safe_tid)
+            else:
+                base_dir = ""
+        if not base_dir:
+            continue
+        conv_path = os.path.join(base_dir, "conversation.json")
         if not os.path.exists(conv_path):
             continue
         with open(conv_path, encoding="utf-8") as f:
@@ -170,7 +178,7 @@ def fmt_minibatch_trajectories(
         # ── Append target context (what the agent saw) ──────────────
         target_prompt = item.get("target_system_prompt", "")
         if not target_prompt:
-            prompt_path = os.path.join(prediction_dir, safe_tid, "target_system_prompt.txt")
+            prompt_path = os.path.join(base_dir, "target_system_prompt.txt")
             if os.path.exists(prompt_path):
                 with open(prompt_path, encoding="utf-8") as f:
                     target_prompt = f.read()
@@ -182,7 +190,7 @@ def fmt_minibatch_trajectories(
 
         user_prompt = item.get("target_user_prompt", "")
         if not user_prompt:
-            user_prompt_path = os.path.join(prediction_dir, safe_tid, "target_user_prompt.txt")
+            user_prompt_path = os.path.join(base_dir, "target_user_prompt.txt")
             if os.path.exists(user_prompt_path):
                 with open(user_prompt_path, encoding="utf-8") as f:
                     user_prompt = f.read()
@@ -195,7 +203,7 @@ def fmt_minibatch_trajectories(
         if os.environ.get("REFLACT_CODEX_TRACE_TO_OPTIMIZER", "0") == "1":
             codex_trace_summary = item.get("codex_trace_summary", "")
             if not codex_trace_summary:
-                codex_trace_summary_path = os.path.join(prediction_dir, safe_tid, "codex_trace_summary.txt")
+                codex_trace_summary_path = os.path.join(base_dir, "codex_trace_summary.txt")
                 if os.path.exists(codex_trace_summary_path):
                     with open(codex_trace_summary_path, encoding="utf-8") as f:
                         codex_trace_summary = f.read()
@@ -214,7 +222,7 @@ def fmt_minibatch_trajectories(
 
         preview = item.get("spreadsheet_preview", "")
         if not preview:
-            preview_path = os.path.join(prediction_dir, safe_tid, "spreadsheet_preview.txt")
+            preview_path = os.path.join(base_dir, "spreadsheet_preview.txt")
             if os.path.exists(preview_path):
                 with open(preview_path, encoding="utf-8") as f:
                     preview = f.read()
@@ -307,6 +315,13 @@ def run_error_analyst_minibatch(
 
     trajectories_text = fmt_minibatch_trajectories(items, prediction_dir)
     if not trajectories_text.strip():
+        import warnings
+        warnings.warn(
+            f"reflect: no trajectory files found in {prediction_dir} for "
+            f"{len(items)} items (ids: {[str(i.get('id','?')) for i in items[:3]]}...). "
+            f"Check that rollout prediction dirs match item ids.",
+            stacklevel=2,
+        )
         return None
 
     user = (
