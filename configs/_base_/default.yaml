@@ -6,24 +6,23 @@ model:
   backend: openai_compatible
   optimizer_backend: openai_compatible
   target_backend: openai_compatible
-  # Leave optimizer_* / target_* blank to use the shared value.
-  openai_compatible_base_url: "https://yibuapi.com/v1/"
-  openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
-  # 多 key 轮询：逗号分隔多个 key 即可，如 "sk-key1,sk-key2,sk-key3"
-  # openai_compatible_api_key: "sk-aKvB_bgo8FfKyykyFaW8DQ"
 
-  # optimizer: GLM-5.2
-  # optimizer_openai_compatible_base_url: "http://113.46.219.251:8080/v1"   # blank = use shared
-  # optimizer_openai_compatible_api_key: "sk-6Vi_7BS_IuofzkYt8t2B9w"
-  # optimizer_openai_compatible_api_key: "sk-aKvB_bgo8FfKyykyFaW8DQ"
-  optimizer: gpt-5.6-sol
-  optimizer_openai_compatible_base_url: "https://yibuapi.com/v1/"   # blank = use shared
-  optimizer_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
-  # target: gpt-4o
-  target: gpt-5.6-sol
-  target_openai_compatible_base_url: "https://yibuapi.com/v1/"      # blank = use shared
-  target_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
+  # openai_compatible_base_url: "https://yibuapi.com/v1/"
+  # openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
+  openai_compatible_base_url: "http://113.46.219.251:8080/v1"
+  openai_compatible_api_key: "sk-ICnSVVK7fRlxOCPa411PnQ,sk-6Vi_7BS_IuofzkYt8t2B9w,sk-aKvB_bgo8FfKyykyFaW8DQ,sk-UMg-HjVgC6JHbycwDnvycQ"
 
+  optimizer: ""
+  # optimizer_openai_compatible_base_url: "https://yibuapi.com/v1/"
+  # optimizer_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
+  optimizer_openai_compatible_base_url: "http://113.46.219.251:8080/v1"
+  optimizer_openai_compatible_api_key: "sk-ICnSVVK7fRlxOCPa411PnQ,sk-6Vi_7BS_IuofzkYt8t2B9w,sk-aKvB_bgo8FfKyykyFaW8DQ,sk-UMg-HjVgC6JHbycwDnvycQ"
+
+  target: ""
+  # target_openai_compatible_base_url: "https://yibuapi.com/v1/"
+  # target_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
+  target_openai_compatible_base_url: "http://113.46.219.251:8080/v1"
+  target_openai_compatible_api_key: "sk-ICnSVVK7fRlxOCPa411PnQ,sk-6Vi_7BS_IuofzkYt8t2B9w,sk-aKvB_bgo8FfKyykyFaW8DQ,sk-UMg-HjVgC6JHbycwDnvycQ"
 
   # 在 azure_openai.py#L380-L412 中真正生效:作为 reasoning = {"effort": ...} (Responses API)或 
   # reasoning_effort =...(Chat API)传给 API,控制 optimizer/target 所有 LLM 调用的思考量

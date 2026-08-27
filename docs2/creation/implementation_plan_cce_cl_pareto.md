@@ -116,15 +116,69 @@ def run_cce_reflect(
 
 要点：给出 skill + 若干对比对 → 要求 (a) 识别成功/失败的行为分叉点（步骤格式找分叉 step，消息格式找分叉 turn，代码产物找代码段差异）；(b) 每条 edit 必须给出显式因果链；(c) 禁止输出仅相关性支持的 edit；(d) 禁止泄漏 reference\_text 具体值。
 
+#### 1.2.5 配对噪声门（核心：复用 Prox 噪声估算，防止为采样噪声生成无效补丁）
+
+**问题**：CCE 的配对来自同一任务跑两次（或同类别配对），但 LLM 采样本身有随机性——同一 skill + 同一道题，这次成功下次可能失败。单看一对配对，无法区分"skill 缺陷导致的系统性分叉"和"采样噪声导致的随机分叉"。
+
+**噪声来源量化**：同一任务两次跑结果不同的概率（翻转率）为：
+
+```
+P_flip = 2 · p · (1 - p)
+```
+
+其中 `p` = 当前 batch 的成功率。这正是 Prox 噪声估算 [gate.py:229-275](file:///c:/Users/huawei/Desktop/SkillOpt/SkillOpt/skillopt/evaluation/gate.py#L229-L275) 中 `σ_diff = sqrt(2·p(1-p)/n)` 的 `p(1-p)` 项——**同一套噪声模型，同一套自适应**。
+
+**噪声门设计**（分两层）：
+
+```python
+# ─── 层 1：批次级噪声门（配对总量是否超出噪声预期）───
+def _batch_noise_gate(n_pairs: int, p: float, n_items: int, scale: float) -> bool:
+    """判断配对总量是否超出噪声预期。"""
+    expected_noise_pairs = n_items * 2 * p * (1 - p)   # 噪声预期翻转对数
+    sigma = (2 * p * (1 - p) / n_items) ** 0.5          # σ_diff（复用 Prox 公式）
+    threshold = expected_noise_pairs + scale * sigma * n_items
+    return n_pairs > threshold   # True = 有信号，False = 全是噪声
+
+# ─── 层 2：模式级噪声门（单个行为模式频率差是否显著）───
+def _pattern_noise_gate(f_fail: float, f_succ: float,
+                         n_fail: int, n_succ: int, scale: float) -> bool:
+    """两比例 z 检验：模式频率差是否超出噪声门。"""
+    f_pooled = (f_fail * n_fail + f_succ * n_succ) / (n_fail + n_succ)
+    sigma_pattern = (f_pooled * (1 - f_pooled) / n_fail +
+                     f_pooled * (1 - f_pooled) / n_succ) ** 0.5
+    return abs(f_fail - f_succ) > scale * sigma_pattern   # True = 因果信号
+```
+
+- **层 1（批次级）**：配对前先检查。如果 batch 有 40 题、p=0.8，预期噪声翻转对数 = 40×2×0.8×0.2 = 12.8 对。如果实际配对数 ≤ 噪声预期 → 整批跳过 CCE，零成本
+- **层 2（模式级）**：optimizer 返回的每条 edit 对应一个行为模式。检查该模式在失败侧的频率 `f_fail` vs 成功侧 `f_succ`，只有 `|f_fail - f_succ| > k × σ_pattern` 才写入 CCE patch
+- **k 因子标定**：复用 Prox 的 `prox_tolerance_scale`（默认 2.5），对应 ~0.6% 误判率（Φ(-2.5) ≈ 0.006）
+- **`p` 的来源**：直接复用 `auto_tolerances()` 已经算出的 `p`（现有 reflect 调度器在 gate 评估时已计算并存入 `step_record`）
+
+**与 Prox 的复用关系**：
+
+| 组件 | Prox 中的形态 | CCE 中的形态 | 复用程度 |
+|---|---|---|---|
+| `p(1-p)` 翻转概率 | `σ_diff = sqrt(2·p(1-p)/n)` 的核心项 | `P_flip = 2·p(1-p)` 的核心项 | **完全复用** |
+| `k` 因子标定 | `prox_tolerance_scale: 2.5` | `cce_noise_scale: 2.5` | **同款标定，同款 Φ 映射** |
+| 自动适配 | 随 `p, n` 自适应 | 随 `p, n_fail, n_succ` 自适应 | **同哲学** |
+| σ 公式 | 配对 Bernoulli 差 `sqrt(2·p(1-p)/n)` | 两比例差 `sqrt(f(1-f)/n₁ + f(1-f)/n₂)` | **同族不同式**（配对 vs 非配对） |
+
+**实施方式**：
+
+- `auto_tolerances()` 已经在 `gate.py` 中，CCE 的 `auto_pattern_noise()` 放在同一个文件，共享 `p` 的计算逻辑
+- 批次级噪声门在 `run_cce_reflect()` 开头调用（配对前）
+- 模式级噪声门在 optimizer 返回后、patch 落盘前调用（过滤后写入）
+
 ### 1.3 修改点清单
 
 | 文件                                 | 修改                                                                                                                                  |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `skillopt/gradient/cce_reflect.py` | **新增**（全部核心逻辑）                                                                                                                      |
+| `skillopt/gradient/cce_reflect.py` | **新增**（全部核心逻辑 + 噪声门过滤）                                                                                                                |
+| `skillopt/evaluation/gate.py`     | **新增** `auto_pattern_noise()` 函数（两比例 z 检验噪声门），与现有 `auto_tolerances()` 共享 `p` 的计算逻辑；新增 `_batch_noise_gate()` 辅助函数 |
 | `skillopt/gradient/reflect.py`     | `run_minibatch_reflect()`（L476）末尾：开关开启时调用 `run_cce_reflect`，返回值 append 进 `raw_patches`；开关读取复用 `is_skill_aware_enabled()` 同款的进程级配置模式 |
 | `skillopt/prompts/cce_reflect.md`  | **新增**                                                                                                                              |
-| `configs/_base_/default.yaml`      | `optimizer.use_cce_reflection: false`（默认关=基线一致）+ 子参数                                                                                |
-| `docs/reference/config.md`         | 配置表补 4 行                                                                                                                            |
+| `configs/_base_/default.yaml`      | `optimizer.use_cce_reflection: false`（默认关=基线一致）+ 子参数（含噪声门参数）                                                                      |
+| `docs/reference/config.md`         | 配置表补 7 行（原 4 行 + 噪声门 3 行）                                                                                                              |
 
 trainer **零改动**（配置经 `is_*_enabled()` 进程级开关传递，同 skill\_aware 模式）。
 
@@ -137,6 +191,10 @@ optimizer:
   cce_max_pairs: 6               # 每步配对上限（成本护栏，0=不限）
   cce_success_reuse: 2           # 单条成功轨迹最多被配对次数
   cce_cross_type_pairing: false  # 无类别键时的跨类别兜底
+  # ── 噪声门（复用 Prox 噪声估算框架）──
+  cce_noise_scale: 2.5           # k 因子，复用 prox_tolerance_scale 标定；Φ(-2.5)≈0.006 误判率
+  cce_batch_noise_gate: true     # 批次级噪声门：配对总量 ≤ 噪声预期时整批跳过
+  cce_pattern_noise_gate: true    # 模式级噪声门：单模式频率差 < k×σ 时不写入 patch
 ```
 
 ### 1.5 与现有机制的交互
@@ -146,14 +204,16 @@ optimizer:
 | `failure_only: true`         | 兼容  | CCE 只用成功**轨迹**不产成功 patch，不受该开关影响（调度器里 successes 列表在该开关下仍可构建）   |
 | `use_skill_aware_reflection` | 协同  | CCE patch 走 failure 流，自动经过 defect/lapse 分类增强；两者叠加即 run 3 的组合实验 |
 | train\_gate                  | 兼容  | CCE 只影响 patch 质量，gate 语义不变；若 gate 拒绝率因此下降，即是 CCE 生效的直接证据       |
-| prox\_shrink                 | 兼容  | 单谱系假设未动                                                        |
+| **prox\_shrink**             | **噪声复用** | **CCE 噪声门复用 Prox 的 `p(1-p)` 翻转概率和 `k` 因子标定；`auto_tolerances()` 和 `auto_pattern_noise()` 共享 `p` 的计算逻辑** |
 | 断点续跑                         | 已处理 | cce\_\*.json 落盘检查与 minibatch patch 同款                          |
 
 ### 1.6 成本与预期
 
 - API：每步 ≤ `ceil(6/3)=2` 次 optimizer 调用（对比现有 analyst \~6 次），**+33% optimizer 调用、0 额外 rollout**；wall time 增幅 < 5%（optimizer 并行、rollout 才是瓶颈）
+- **噪声门进一步降本**：批次级噪声门在配对前检查，当 batch 成功率 p 接近 0 或 1 时（翻转率 `2·p·(1-p)` 趋近 0），配对数天然受限；当 p ≈ 0.5 时噪声最大，噪声门过滤掉无效配对，避免为噪声生成 optimizer 调用。预期在高 p 数据集（如 DocVQA p≈0.85）上 CCE 成本更低
 - 预期：patch 因果质量提升 → gate 拒绝率下降 → 有效步数增加；这是三方案中唯一直接作用于已观察短板（gate 连拒、补丁退化）的
 - 风险：40 题批次中成功数少（如 10）→ 配对上限天然受限，机制自动降级为低强度，不会空转烧钱
+- **噪声门风险**：`cce_noise_scale` 设太高（如 4.0）会过滤掉真因果信号（欠拟合），设太低（如 1.0）会让噪声通过（退化为无噪声门）；2.5 与 Prox 同款标定，跨数据集无需手动调参
 
 ***
 

@@ -2,6 +2,8 @@ _base_: ../_base_/default.yaml
 
 model:
   reasoning_effort: medium
+  optimizer: gpt-5.6-sol
+  target: gpt-5.6-sol
 
 train:
   train_size: 80

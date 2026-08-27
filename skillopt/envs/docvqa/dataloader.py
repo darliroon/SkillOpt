@@ -1,23 +1,39 @@
 from __future__ import annotations
 
-import ast
 import csv
+import re
 from pathlib import Path
 
 from skillopt.datasets.base import SplitDataLoader
+
+# Match quoted strings (single or double, with escaped quotes inside) inside brackets
+_QUOTED_STR_RE = re.compile(
+    r"""(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")"""
+)
 
 
 def _parse_answers(raw: str) -> list[str]:
     text = str(raw or "").strip()
     if not text:
         return []
-    try:
-        parsed = ast.literal_eval(text)
-    except Exception:
-        return [text]
-    if isinstance(parsed, list):
-        return [str(item).strip() for item in parsed if str(item).strip()]
-    return [str(parsed).strip()]
+    # DocVQA CSV answers are in numpy array repr format: ['ans1' 'ans2'] or ["a" "b"]
+    # where elements are space-separated (no commas). ast.literal_eval would silently
+    # concatenate adjacent string literals ('a' 'b' -> 'ab'), so we extract quoted strings directly.
+    if text.startswith("[") and text.endswith("]"):
+        matches = _QUOTED_STR_RE.findall(text)
+        if matches:
+            answers = []
+            for m in matches:
+                quote = m[0]
+                inner = m[1:-1]
+                inner = inner.replace("\\" + quote, quote).replace("\\\\", "\\")
+                inner = inner.strip()
+                if inner:
+                    answers.append(inner)
+            if answers:
+                return answers
+    # Fallback: plain string without brackets
+    return [text]
 
 
 def _extract_document_path(question: str) -> tuple[str, str]:

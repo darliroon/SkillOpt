@@ -2698,6 +2698,7 @@ class ReflACTTrainer:
                         k: {
                             "total": b["total"],
                             "hard_acc": b["hard"] / max(b["total"], 1),
+                            "soft_acc": b["soft"] / max(b["total"], 1),
                         }
                         for k, b in baseline_buckets.items()
                     },
@@ -2733,6 +2734,7 @@ class ReflACTTrainer:
                         k: {
                             "total": b["total"],
                             "hard_acc": b["hard"] / max(b["total"], 1),
+                            "soft_acc": b["soft"] / max(b["total"], 1),
                         }
                         for k, b in best_buckets.items()
                     },
@@ -2759,6 +2761,7 @@ class ReflACTTrainer:
                                 k: {
                                     "total": b["total"],
                                     "hard_acc": b["hard"] / max(b["total"], 1),
+                                    "soft_acc": b["soft"] / max(b["total"], 1),
                                 }
                                 for k, b in best_buckets.items()
                             },
@@ -2797,6 +2800,7 @@ class ReflACTTrainer:
                                 k: {
                                     "total": b["total"],
                                     "hard_acc": b["hard"] / max(b["total"], 1),
+                                    "soft_acc": b["soft"] / max(b["total"], 1),
                                 }
                                 for k, b in final_buckets.items()
                             },
@@ -2842,6 +2846,7 @@ class ReflACTTrainer:
                                 k: {
                                     "total": b["total"],
                                     "hard_acc": b["hard"] / max(b["total"], 1),
+                                    "soft_acc": b["soft"] / max(b["total"], 1),
                                 }
                                 for k, b in prox_buckets.items()
                             },

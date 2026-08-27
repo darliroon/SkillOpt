@@ -2,12 +2,12 @@
 
 Usage:
     python scripts/probe_latency.py --model gpt-5.2
-    python scripts/probe_latency.py --model gpt-5.2 --url http://113.46.219.251:8080/v1 --key sk-xxx
-    python scripts/probe_latency.py --model gpt-5.2 --n 10 --max-tokens 2000
+    python scripts/probe_latency.py --model Qwen3.7-Plus --url http://113.46.219.251:8080/v1 --key sk-ICnSVVK7fRlxOCPa411PnQ
+    python scripts/probe_latency.py --model gpt-5.5 --n 10 --max-tokens 2000
 
 Defaults pull from configs/officeqa/default.yaml (yibuapi endpoint).
 """
-import argparse
+import argparse   
 import json
 import statistics
 import sys
@@ -37,7 +37,13 @@ def parse_args():
     return p.parse_args()
 
 
-def resolve_endpoint(url: str, key: str) -> tuple[str, str]:
+def resolve_endpoint(url_alias: str, key_alias: str) -> tuple[str, str]:
+    if url_alias == "relay":
+        url, key = RELAY_URL, RELAY_KEY
+    else:
+        url, key = url_alias, key_alias
+    if key_alias == "relay" and url_alias != "relay":
+        key = RELAY_KEY
     return url.rstrip("/"), key
 
 
