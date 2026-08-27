@@ -1,0 +1,150 @@
+skillopt/envs/docvqa/dataloader.py
+  s_e563bca312678e::t_4a501bab004243 4,9-13,19-36
+configs/livemathematicianbench/default.yaml
+  h_4d4cc0d7ef2df6 3-6
+  s_092bd3a4ac3f06::t_1884cb61e392bb 25
+skillopt/engine/trainer.py
+  s_e563bca312678e::t_7cbcae0b80c248 2737
+  s_e563bca312678e::t_d85f7dcadc7492 2803
+  s_e563bca312678e::t_8b435a6f2f4ee8 2764
+  s_e563bca312678e::t_72dec11012b917 2849
+  s_e563bca312678e::t_462452f9ea0259 2701
+configs/alfworld/default.yaml
+  h_4d4cc0d7ef2df6 3-6
+scripts/probe_latency.py
+  h_4d4cc0d7ef2df6 5-6,40-46
+configs/searchqa/default.yaml
+  s_a10c250ddbcc3b::t_1bc690d67e145d 5
+  h_4d4cc0d7ef2df6 6,33
+docs2/ppt/cce-reflect-pitch.md
+  s_e563bca312678e::t_4c8f28740c0ff4 194-197,200-202,204-209,211-214
+  s_e563bca312678e::t_8b5d29e1aa7f10 162-165,167-168,170-172,174-176,178-180,182-185,187,189
+  s_e563bca312678e::t_55e4792fb7265e 1-33,35,37,39,41,43,61-161,166,169,173,177,181,186,188,190-193,198-199,203,210,215-249
+  s_e563bca312678e::t_55256987d46351 34,36,38,40,42,44-60
+configs/officeqa/default.yaml
+  h_4d4cc0d7ef2df6 5-6
+docs2/creation/CCE_Reflect.md
+  h_4d4cc0d7ef2df6 94,96,198
+.gitignore
+  h_4d4cc0d7ef2df6 71-72
+configs/docvqa/default.yaml
+  h_4d4cc0d7ef2df6 5-7,29
+  s_e563bca312678e::t_dd64b472561df5 24
+configs/spreadsheetbench/default.yaml
+  s_5919a663421fbc::t_7c0dd76c34e447 5-6
+docs2/creation/implementation_plan_cce_cl_pareto.md
+  s_e563bca312678e::t_4c4a7e1fa33e2a 207
+  s_e563bca312678e::t_5711ae6a161ae5 194-197
+  s_e563bca312678e::t_786724838fed4f 176-177,180-181
+  s_e563bca312678e::t_2a63b630b63d9b 213,216
+  s_e563bca312678e::t_d710455dff217a 119-171
+docs2/creation/hard-soft评分.md
+  s_e563bca312678e::t_b6df47c68c82b5 2-4,9,11-13,16,18,20,22,24-25,28-31,33-37,40-50,52-55,57-60
+  s_e563bca312678e::t_3440564c2cd5cf 1
+  s_e563bca312678e::t_33737cb0122ae1 5-8
+  s_e563bca312678e::t_58c5fc405d9b77 10
+  s_e563bca312678e::t_aaef29e5b7c99c 14-15
+  s_e563bca312678e::t_69729fe1d216b2 17
+  s_e563bca312678e::t_ec1188787f3da9 19
+  s_e563bca312678e::t_3b85e9aacaf24c 21
+  s_e563bca312678e::t_027c0880ba6d2f 23
+  s_e563bca312678e::t_82773727bab418 26-27
+  s_e563bca312678e::t_ae02e5065c9287 32
+  s_e563bca312678e::t_04b0adb51738a0 38-39
+  s_e563bca312678e::t_b44032095be67c 51
+  s_e563bca312678e::t_4553851698f12d 56
+  s_e563bca312678e::t_26a9fb23c4614a 61
+docs2/creation/searchqa-eval-comparison.md
+  s_e563bca312678e::t_4ffc18496e6059 19-20
+  s_e563bca312678e::t_e88cfa193587ad 47-54
+  s_e563bca312678e::t_c37a7f92e87576 16-18
+  s_e563bca312678e::t_b0813d6a6277c5 21-23,44-46
+  s_e563bca312678e::t_c21ee36ff9a6c3 55-57
+configs/_base_/default.yaml
+  h_4d4cc0d7ef2df6 13,16,18-20,22-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.2",
+  "base_commit_sha": "a210202d57cac93e850cb7a9bb126183ade74f9d",
+  "prompts": {},
+  "humans": {
+    "h_4d4cc0d7ef2df6": {
+      "author": "lihaitao <1761864532@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_092bd3a4ac3f06": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a8938866d00dde861740ed0",
+        "model": "GLM-5.2"
+      },
+      "human_author": "lihaitao <1761864532@qq.com>",
+      "custom_attributes": {
+        "client_type": "ide",
+        "external_session_id": "6a8938866d00dde861740ed0",
+        "tool_type": "builtin",
+        "runtime_client": "trae-tob-git-ai",
+        "operation_id": "6a8d02276d00dde861741adc",
+        "tool_id": "icube:applyChatSnapshotPatch",
+        "session_id": "6a8938866d00dde861740ed0",
+        "tool_use_id": "6a8d02276d00dde861741adc",
+        "source_scene": "agent",
+        "dedupe_key": "6a8938866d00dde861740ed0:6a8d02276d00dde861741adc:afterEdit:a9ef8ef7",
+        "edit_kind": "file_edit"
+      }
+    },
+    "s_5919a663421fbc": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-12ffe753-ceb9-4506-957a-c5965b1359ca",
+        "model": "default"
+      },
+      "human_author": "lihaitao <1761864532@qq.com>",
+      "custom_attributes": {
+        "tool": "trae-cue",
+        "source_scene": "cue",
+        "external_session_id": "icr-12ffe753-ceb9-4506-957a-c5965b1359ca",
+        "client_type": "ide",
+        "edit_kind": "file_edit"
+      }
+    },
+    "s_a10c250ddbcc3b": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-d31c5674-7574-4804-bfaf-1cd807401a4d",
+        "model": "default"
+      },
+      "human_author": "lihaitao <1761864532@qq.com>",
+      "custom_attributes": {
+        "client_type": "ide",
+        "source_scene": "cue",
+        "external_session_id": "icr-d31c5674-7574-4804-bfaf-1cd807401a4d",
+        "tool": "trae-cue",
+        "edit_kind": "file_edit"
+      }
+    },
+    "s_e563bca312678e": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a8d36666d00dde861741b96",
+        "model": "GLM-5.2"
+      },
+      "human_author": "lihaitao <1761864532@qq.com>",
+      "custom_attributes": {
+        "client_type": "ide",
+        "external_session_id": "6a8d36666d00dde861741b96",
+        "session_id": "6a8d36666d00dde861741b96",
+        "tool_type": "builtin",
+        "tool_use_id": "6a8fdb096d00dde861742149",
+        "runtime_client": "trae-tob-git-ai",
+        "tool_id": "icube:applyChatSnapshotPatch",
+        "dedupe_key": "6a8d36666d00dde861741b96:6a8fdb096d00dde861742149:afterEdit:469cf625",
+        "edit_kind": "file_edit",
+        "source_scene": "agent",
+        "operation_id": "6a8fdb096d00dde861742149"
+      }
+    }
+  }
+}
