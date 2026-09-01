@@ -105,10 +105,17 @@ _target_client: OpenAI | None = None
 # Multi-key round-robin pool: when the configured api_key contains commas
 # (e.g. "sk-key1,sk-key2,sk-key3"), we build one client per key and rotate
 # across calls.  This spreads load when a single key has RPM/TPM limits.
+# When deployment (model name) also contains commas, each key is paired with
+# its corresponding model (e.g. "GLM-5.2,GLM-5.1" + "key1,key2" → key1→GLM-5.2,
+# key2→GLM-5.1), distributing load across multiple model deployments.
 _optimizer_clients: list[OpenAI] = []
 _target_clients: list[OpenAI] = []
+_optimizer_deployments: list[str] = []
+_target_deployments: list[str] = []
 _optimizer_cycle: itertools.cycle | None = None
 _target_cycle: itertools.cycle | None = None
+_optimizer_deployment_cycle: itertools.cycle | None = None
+_target_deployment_cycle: itertools.cycle | None = None
 _cycle_lock = threading.Lock()
 
 
@@ -126,8 +133,16 @@ def _parse_keys(raw: str) -> list[str]:
     return seen
 
 
-def _build_clients(config: OpenAICompatibleConfig) -> list[OpenAI]:
-    """Build one client per API key for round-robin load balancing."""
+def _build_clients(
+    config: OpenAICompatibleConfig,
+) -> tuple[list[OpenAI], list[str]]:
+    """Build one client per API key for round-robin load balancing.
+
+    Returns (clients, deployments) where deployments[i] is the model name
+    paired with clients[i].  When deployment contains commas (e.g.
+    "GLM-5.2,GLM-5.1"), each key gets its own model; otherwise all keys
+    share the single deployment name.
+    """
     base_url = config.base_url.rstrip("/")
     if not base_url:
         raise ValueError(
@@ -137,27 +152,39 @@ def _build_clients(config: OpenAICompatibleConfig) -> list[OpenAI]:
     keys = _parse_keys(config.api_key) if config.api_key else []
     if not keys:
         keys = ["dummy"]
-    return [
+    deployments = _parse_keys(config.deployment) if config.deployment else []
+    if not deployments:
+        deployments = [config.deployment or ""]
+    # Replicate the shorter list to match the longer one
+    n = max(len(keys), len(deployments))
+    keys = (keys * ((n // len(keys)) + 1))[:n]
+    deployments = (deployments * ((n // len(deployments)) + 1))[:n]
+    clients = [
         OpenAI(base_url=base_url, api_key=k, timeout=config.timeout_seconds)
         for k in keys
     ]
+    return clients, deployments
 
 
 def _ensure_clients(role: str) -> None:
     """Lazily build the client pool (one client per key)."""
     global _optimizer_clients, _target_clients
+    global _optimizer_deployments, _target_deployments
     global _optimizer_cycle, _target_cycle
+    global _optimizer_deployment_cycle, _target_deployment_cycle
     with _cycle_lock:
         if role == "optimizer" and not _optimizer_clients:
-            _optimizer_clients = _build_clients(OPTIMIZER_CONFIG)
+            _optimizer_clients, _optimizer_deployments = _build_clients(OPTIMIZER_CONFIG)
             _optimizer_cycle = itertools.cycle(_optimizer_clients)
+            _optimizer_deployment_cycle = itertools.cycle(_optimizer_deployments)
         elif role == "target" and not _target_clients:
-            _target_clients = _build_clients(TARGET_CONFIG)
+            _target_clients, _target_deployments = _build_clients(TARGET_CONFIG)
             _target_cycle = itertools.cycle(_target_clients)
+            _target_deployment_cycle = itertools.cycle(_target_deployments)
 
 
-def _get_client(role: str) -> OpenAI:
-    """Return the next client in the round-robin cycle.
+def _get_client(role: str) -> tuple[OpenAI, str]:
+    """Return the next (client, deployment) in the round-robin cycle.
 
     Falls back to the single-client path when only one key is configured,
     preserving the original lazy-init behaviour.
@@ -165,29 +192,35 @@ def _get_client(role: str) -> OpenAI:
     _ensure_clients(role)
     with _cycle_lock:
         if role == "optimizer":
-            if _optimizer_cycle is not None:
-                return next(_optimizer_cycle)
-        elif _target_cycle is not None:
-            return next(_target_cycle)
+            if _optimizer_cycle is not None and _optimizer_deployment_cycle is not None:
+                return next(_optimizer_cycle), next(_optimizer_deployment_cycle)
+        elif _target_cycle is not None and _target_deployment_cycle is not None:
+            return next(_target_cycle), next(_target_deployment_cycle)
     # Fallback (should not be reached, but keeps the signature safe)
     _ensure_clients(role)
     if role == "optimizer":
-        return _optimizer_clients[0]
-    return _target_clients[0]
+        return _optimizer_clients[0], _optimizer_deployments[0] if _optimizer_deployments else OPTIMIZER_CONFIG.deployment
+    return _target_clients[0], _target_deployments[0] if _target_deployments else TARGET_CONFIG.deployment
 
 
 def _reset_clients() -> None:
     global _optimizer_client, _target_client
     global _optimizer_clients, _target_clients
+    global _optimizer_deployments, _target_deployments
     global _optimizer_cycle, _target_cycle
+    global _optimizer_deployment_cycle, _target_deployment_cycle
     with _client_lock:
         _optimizer_client = None
         _target_client = None
     with _cycle_lock:
         _optimizer_clients = []
         _target_clients = []
+        _optimizer_deployments = []
+        _target_deployments = []
         _optimizer_cycle = None
         _target_cycle = None
+        _optimizer_deployment_cycle = None
+        _target_deployment_cycle = None
 
 
 def count_tokens(text: str, model: str | None = None) -> int:
@@ -227,11 +260,11 @@ def _chat_messages_impl(
     timeout: float | None = None,
 ) -> tuple[Any, dict[str, int]]:
     config = _config_for(role)
-    client = _get_client(role)
+    client, pool_deployment = _get_client(role)
     if max_completion_tokens <= 0:
         raise ValueError("max_completion_tokens must be set (> 0) — check your config")
     kwargs: dict[str, Any] = {
-        "model": deployment or config.deployment,
+        "model": deployment or pool_deployment or config.deployment,
         "messages": messages,
         "max_tokens": max_completion_tokens,
     }

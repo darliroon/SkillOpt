@@ -474,7 +474,7 @@ def run_spreadsheet_batch(
     done_ids: set[str] = set()
     existing: list[dict] = []
     if os.path.exists(results_path):
-        with open(results_path) as f:
+        with open(results_path, encoding="utf-8") as f:
             for line in f:
                 try:
                     r = json.loads(line)
@@ -869,7 +869,7 @@ def run_spreadsheet_batch_codegen(
     done_ids: set[str] = set()
     existing: list[dict] = []
     if os.path.exists(results_path):
-        with open(results_path) as f:
+        with open(results_path, encoding="utf-8") as f:
             for line in f:
                 try:
                     r = json.loads(line)

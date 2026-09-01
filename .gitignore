@@ -71,3 +71,4 @@ smoke_results/
 .cache/
 scripts/
 output/
+.dbg/

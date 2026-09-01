@@ -106,17 +106,21 @@ class SpreadsheetBenchAdapter(EnvAdapter):
         results_path = os.path.join(out_dir, "results.jsonl")
         os.makedirs(out_dir, exist_ok=True)
 
-        # Resume support
+        # Resume support: only return early if ALL items are done
+        all_ids = {str(it["id"]) for it in items}
+        done_ids: set[str] = set()
+        existing: list[dict] = []
         if os.path.exists(results_path):
-            existing: list[dict] = []
             with open(results_path, encoding="utf-8") as f:
                 for line in f:
                     try:
-                        existing.append(json.loads(line))
+                        r = json.loads(line)
+                        done_ids.add(str(r["id"]))
+                        existing.append(r)
                     except (ValueError, RecursionError, TypeError):
                         pass
-            if existing:
-                return existing
+        if existing and all_ids <= done_ids:
+            return existing
 
         if self.mode in ("single", "multi"):
             results = run_spreadsheet_batch_codegen(

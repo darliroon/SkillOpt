@@ -19,6 +19,7 @@ model:
   optimizer_openai_compatible_api_key: "sk-ICnSVVK7fRlxOCPa411PnQ,sk-6Vi_7BS_IuofzkYt8t2B9w,sk-aKvB_bgo8FfKyykyFaW8DQ,sk-UMg-HjVgC6JHbycwDnvycQ"
 
   target: ""
+  # target: GLM-5.2,GLM-5.1  ← comma-separated: each key gets its own model deployment
   # target_openai_compatible_base_url: "https://yibuapi.com/v1/"
   # target_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
   target_openai_compatible_base_url: "http://113.46.219.251:8080/v1"
@@ -98,6 +99,15 @@ optimizer:
   prox_noise_gate: -1           # 噪声门宽度; 负数 = 自动(= 0.5×σ_diff, n=200时≈0.02); 0 = 关闭下钻; 正数 = 固定值; 门宽>0.05时自动跳过下钻(块级效应必然低于节级, 测不出)
   prox_sub_pack_chars: -1       # 下钻段落块最小打包字符数; 负数 = 自动(=clamp(单元长/6, 400, 2000), 每单元约4-6块, 随skill写作密度自适应, 换数据集免手调); 正数 = 固定值
   prox_drill_budget: 6          # 每轮最多下钻评估的块总数(成本控制, 大单元优先)
+  
+  # ── Phase 2: GEPA 过程驱动反思 ───────────────────────────────────
+  # 接在 SkillOpt 训练 (Phase 1) 之后, Prox shrink (Phase 3) 之前
+  # GEPA 读取完整执行轨迹做步骤级因果分析, 突破结果驱动反思的上限
+  use_gepa: false               # 总开关; false = 跳过 GEPA 阶段
+  gepa_max_metric_calls: 100     # GEPA 评估预算(每次=1题rollout); 100-200 为推荐范围
+  gepa_reflection_lm: ""         # GEPA 反思模型; 空 = 复用 SkillOpt optimizer model
+  gepa_minibatch_size: 10        # 每次反思的 minibatch 大小(题目数)
+  gepa_run_dir: ""               # GEPA 状态目录; 空 = 自动到 out_root/gepa_phase/
 
 
 evaluation:

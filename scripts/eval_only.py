@@ -583,7 +583,6 @@ def main() -> None:
     print(f"  [eval] out_root={out_root}")
     print(f"{'='*60}")
 
-    # Run rollout
     results = adapter.rollout(items, skill_content, out_root)
 
     # Score

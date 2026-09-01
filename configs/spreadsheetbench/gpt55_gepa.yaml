@@ -1,9 +1,13 @@
-_base_: ../_base_/default.yaml
+_base_: default.yaml
 
 model:
   reasoning_effort: medium
-  optimizer: GLM-5.2,GLM-5.1,GLM-5,Qwen3.7-Plus
-  target: GLM-5.2,GLM-5.1,GLM-5,Qwen3.7-Plus
+  optimizer: gpt-5.5
+  target: gpt-5.5
+  optimizer_openai_compatible_base_url: "https://yibuapi.com/v1/"
+  optimizer_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex"
+  target_openai_compatible_base_url: "https://yibuapi.com/v1/"
+  target_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex"
 
 train:
   train_size: 80
@@ -16,6 +20,9 @@ gradient:
 
 optimizer:
   learning_rate: 4
+  use_gepa: true
+  gepa_max_metric_calls: 60
+  gepa_minibatch_size: 5
 
 evaluation:
   sel_env_num: 0
@@ -33,4 +40,4 @@ env:
   max_turns: 30
   max_completion_tokens: 16384
   exec_timeout: 600
-  workers: 24
+  workers: 8

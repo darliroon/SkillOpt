@@ -1,0 +1,4 @@
+model:
+  name: gpt-5.5
+  base_url: "https://yibuapi.com/v1/"
+  api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex"

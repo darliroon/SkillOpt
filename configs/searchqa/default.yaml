@@ -2,8 +2,8 @@ _base_: ../_base_/default.yaml
 
 model:
   reasoning_effort: medium
-  optimizer: gpt-5.6-sol
-  target: gpt-5.6-sol
+  optimizer: GLM-5.2
+  target: GLM-5.2
 
 train:
   train_size: 400
@@ -16,6 +16,9 @@ gradient:
 
 optimizer:
   learning_rate: 4
+  use_gepa: false
+  gepa_max_metric_calls: 60
+  gepa_minibatch_size: 5
 
 evaluation:
   sel_env_num: 0

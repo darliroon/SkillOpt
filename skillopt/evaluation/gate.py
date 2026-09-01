@@ -702,6 +702,8 @@ def prox_trial_pass(
     trial_soft: float,
     base_hard: float,
     base_soft: float,
+    prev_hard: float,
+    prev_soft: float,
     hard_tolerance: float = 0.0,
     soft_tolerance: float = 0.02,
     max_compression: float = 0.10,
@@ -715,8 +717,10 @@ def prox_trial_pass(
     cumulative compression (vs ``base_chars``) stays within ``max_compression``
     (soft cap, see below).
     Gate 3 — validation floor: hard and soft must not drop beyond their
-    tolerances vs the *pre-shrink baseline* (not the evolving skill), so
-    accepted trials cannot drift below the forward-phase result.
+    tolerances vs the **current (previous) skill** — not the pre-shrink
+    baseline — so each round can only degrade by at most ``tolerance``
+    from the immediately preceding accepted skill.  This prevents gradual
+    cumulative drift across rounds while still allowing single-step noise.
 
     The compression cap implements the paper's "累计压缩率软上限" as a *soft*
     cap: exceeding it does not auto-reject. Over-compression is allowed only
@@ -764,14 +768,17 @@ def prox_trial_pass(
                 f"soft {base_soft:.4f}->{trial_soft:.4f})"
             )
 
-    # Gate 3: validation floor vs pre-shrink baseline ──────────────────
-    if trial_hard < base_hard - hard_tolerance - 1e-9:
+    # Gate 3: validation floor vs current (previous) skill ───────────
+    # Compare against the immediately preceding accepted skill, not the
+    # pre-shrink baseline, so each round can only degrade by ≤ tolerance
+    # from the current state — preventing cumulative drift across rounds.
+    if trial_hard < prev_hard - hard_tolerance - 1e-9:
         return False, (
-            f"val hard {base_hard:.4f}->{trial_hard:.4f} drops beyond tol {hard_tolerance:.4f}"
+            f"val hard {prev_hard:.4f}->{trial_hard:.4f} drops beyond tol {hard_tolerance:.4f}"
         )
-    if trial_soft < base_soft - soft_tolerance - 1e-9:
+    if trial_soft < prev_soft - soft_tolerance - 1e-9:
         return False, (
-            f"val soft {base_soft:.4f}->{trial_soft:.4f} drops beyond tol {soft_tolerance:.4f}"
+            f"val soft {prev_soft:.4f}->{trial_soft:.4f} drops beyond tol {soft_tolerance:.4f}"
         )
     escape_note = (
         f" [soft-cap escape: compression {compression:.3f} > cap "
@@ -781,6 +788,6 @@ def prox_trial_pass(
     )
     return True, (
         f"pass (chars {len(prev_skill)}->{len(trial_skill)}, compression "
-        f"{compression:.3f}, hard {base_hard:.4f}->{trial_hard:.4f}, "
-        f"soft {base_soft:.4f}->{trial_soft:.4f}){escape_note}"
+        f"{compression:.3f}, hard {prev_hard:.4f}->{trial_hard:.4f}, "
+        f"soft {prev_soft:.4f}->{trial_soft:.4f}){escape_note}"
     )

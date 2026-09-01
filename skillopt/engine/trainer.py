@@ -895,6 +895,19 @@ class ReflACTTrainer:
 
         # ── SkillProx backward: post-training proximal shrink ───────────
         use_prox_shrink = bool(cfg.get("use_prox_shrink", False))
+        # ── Phase 2: GEPA process-driven reflection ─────────────────────
+        use_gepa = bool(cfg.get("use_gepa", False))
+        gepa_max_metric_calls = max(10, int(cfg.get("gepa_max_metric_calls", 100)))
+        gepa_reflection_lm = str(cfg.get("gepa_reflection_lm", "") or "")
+        gepa_minibatch_size = max(1, int(cfg.get("gepa_minibatch_size", 10)))
+        gepa_run_dir = str(cfg.get("gepa_run_dir", "") or "")
+        if use_gepa:
+            print(
+                f"  [config] gepa=ON max_metric_calls={gepa_max_metric_calls} "
+                f"reflection_lm={'optimizer' if not gepa_reflection_lm else gepa_reflection_lm} "
+                f"minibatch={gepa_minibatch_size}"
+            )
+        # ── Phase 3: Prox shrink config ─────────────────────────────────
         prox_max_trials = max(1, int(cfg.get("prox_max_trials", 3)))
         prox_max_compression = min(
             1.0, max(0.0, float(cfg.get("prox_max_compression", 0.10)))
@@ -912,6 +925,11 @@ class ReflACTTrainer:
             _prox_pack_raw if _prox_pack_raw < 0 else max(200, _prox_pack_raw)
         )
         prox_drill_budget = max(0, int(cfg.get("prox_drill_budget", 6)))
+        prox_candidates_per_round = max(1, int(cfg.get("prox_candidates_per_round", 5)))
+        _targets_raw = str(cfg.get("prox_compression_targets", "0.10,0.20,0.30,0.40,0.50"))
+        prox_compression_targets = tuple(
+            float(x.strip()) for x in _targets_raw.split(",") if x.strip()
+        )
         if use_prox_shrink:
             print(
                 f"  [config] prox_shrink=ON max_trials={prox_max_trials} "
@@ -923,7 +941,9 @@ class ReflACTTrainer:
                 f"adaptive_drill={'ON' if prox_adaptive_drill else 'OFF'} "
                 f"noise_gate={prox_noise_gate if prox_noise_gate >= 0 else 'auto'} "
                 f"sub_pack={prox_sub_pack_chars if prox_sub_pack_chars > 0 else 'auto'} "
-                f"drill_budget={prox_drill_budget}"
+                f"drill_budget={prox_drill_budget} "
+                f"candidates={prox_candidates_per_round} "
+                f"targets={prox_compression_targets}"
             )
 
         if batch_size <= 0:
@@ -2543,7 +2563,38 @@ class ReflACTTrainer:
             f"score={best_score:.4f}"
         )
 
-        # ── SkillProx backward: proximal shrink on the best skill ────────
+        # ── Phase 2: GEPA process-driven reflection (optional) ──────────
+        # Runs AFTER SkillOpt training (Phase 1) and BEFORE prox shrink
+        # (Phase 3).  GEPA reads full execution traces to do step-level
+        # causal analysis, breaking through the outcome-driven reflection
+        # ceiling.  Uses train split for reflective mutation and valid_seen
+        # for Pareto tracking — valid_unseen (test) stays untouched.
+        if use_gepa:
+            try:
+                from skillopt.gepa_bridge import run_gepa_phase
+                gepa_skill, gepa_audit = run_gepa_phase(
+                    best_skill,
+                    adapter=adapter,
+                    build_eval_env=_build_eval_env,
+                    out_root=out_root,
+                    seed=seed,
+                    env_num=cfg["sel_env_num"],
+                    max_metric_calls=gepa_max_metric_calls,
+                    reflection_lm=gepa_reflection_lm,
+                    reflection_minibatch_size=gepa_minibatch_size,
+                    run_dir=gepa_run_dir,
+                )
+                if gepa_audit.get("improved"):
+                    best_skill = gepa_skill
+                    print(
+                        f"  [gepa] skill evolved, using GEPA output for "
+                        f"prox + test evaluation"
+                    )
+            except Exception as exc:
+                print(f"  [gepa] WARNING: GEPA phase failed: {exc!r}")
+                traceback.print_exc()
+
+        # ── Phase 3: SkillProx backward: proximal shrink ──────────────
         # Post-training phase, strictly after best-skill selection and
         # BEFORE the final test evaluation, so the shrunk skill (when
         # accepted) gets its own valid_unseen measurement below.  The shrink
@@ -2571,6 +2622,8 @@ class ReflACTTrainer:
                     noise_gate=prox_noise_gate,
                     sub_pack_chars=prox_sub_pack_chars,
                     drill_budget=prox_drill_budget,
+                    candidates_per_round=prox_candidates_per_round,
+                    compression_targets=prox_compression_targets,
                 )
                 prox_summary = {
                     k: prox_result.get(k)

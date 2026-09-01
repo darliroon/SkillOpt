@@ -3,7 +3,7 @@
 Usage:
     python scripts/probe_latency.py --model gpt-5.2
     python scripts/probe_latency.py --model Qwen3.7-Plus --url http://113.46.219.251:8080/v1 --key sk-ICnSVVK7fRlxOCPa411PnQ
-    python scripts/probe_latency.py --model gpt-5.5 --n 10 --max-tokens 2000
+    python scripts/probe_latency.py --model gpt-5.6-luna --n 10 --max-tokens 2000
 
 Defaults pull from configs/officeqa/default.yaml (yibuapi endpoint).
 """
