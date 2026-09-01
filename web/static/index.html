@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JiuwenSkillEvolve Dashboard</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  [v-cloak]{display:none}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;margin:0;background:#f9fafb;color:#1f2937}
+  .scroll-thin::-webkit-scrollbar{width:6px;height:6px}
+  .scroll-thin::-webkit-scrollbar-thumb{background:#888;border-radius:3px}
+  .scroll-thin::-webkit-scrollbar-track{background:transparent}
+  .log-line{font-family:'Cascadia Code','Fira Code',Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-all}
+  .log-accept{color:#16a34a}
+  .log-reject{color:#dc2626}
+  .log-info{color:#2563eb}
+  .log-warn{color:#d97706}
+  .log-dim{color:#6b7280}
+  .log-step{color:#7c3aed;font-weight:bold}
+  .sidebar{width:220px;background:#111827;color:#9ca3af;display:flex;flex-direction:none;flex-shrink:0}
+  .nav-btn{width:100%;text-align:left;padding:10px 16px;font-size:14px;border:none;background:none;cursor:pointer;color:#9ca3af;display:flex;align-items:center;gap:8px;border-left:3px solid transparent;transition:background 0.2s}
+  .nav-btn:hover{background:#1f2937}
+  .nav-btn.active{background:#1f2937;color:#fff;border-left-color:#3b82f6}
+  .main{flex:1;overflow-y:auto;padding:24px;max-width:1200px}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:16px}
+  .btn{padding:8px 16px;border:none;border-radius:6px;font-size:14px;cursor:pointer;transition:background 0.2s}
+  .btn-primary{background:#2563eb;color:#fff}
+  .btn-primary:hover{background:#1d4ed8}
+  .btn-primary:disabled{opacity:0.5}
+  .btn-green{background:#16a34a;color:#fff}
+  .btn-green:hover{background:#15803d}
+  .btn-red{background:#dc2626;color:#fff}
+  .btn-red:hover{background:#b91c1c}
+  .input{border:1px solid #d1d5db;border-radius:6px;padding:8px;font-size:14px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px}
+  .badge-green{background:#dcfce7;color:#166534}
+  .badge-red{background:#fee2e2;color:#991b1b}
+  .badge-gray{background:#f3f4f6;color:#374151}
+  .badge-blue{background:#dbeafe;color:#1e40af}
+  .badge-orange{background:#fed7aa;color:#9a3412}
+  .badge-purple{background:#f3e8ff;color:#6b21a8}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{background:#f9fafb;color:#6b7280;text-align:left;padding:8px;font-weight:600}
+  td{border-top:1px solid #e5e7eb;padding:6px 8px}
+  tr:hover{background:#eff6ff;cursor:pointer}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:50;display:flex;align-items:center;justify-content:center}
+  .modal{background:#fff;border-radius:12px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:80vh;overflow:auto}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  .grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:24px}
+  .stat-card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;text-align:center}
+  .stat-num{font-size:24px;font-weight:bold}
+  .stat-label{font-size:12px;color:#6b7280}
+  .log-box{background:#111827;border-radius:8px;padding:16px;overflow:auto;max-height:400px}
+  pre.code{font-size:12px;background:#f3f4f6;border-radius:6px;padding:12px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+  .flex{display:flex}
+  .items-center{align-items:center}
+  .gap-2{gap:8px}
+  .gap-3{gap:12px}
+  .mb-4{margin-bottom:16px}
+  .mb-6{margin-bottom:24px}
+  .text-sm{font-size:14px}
+  .text-xs{font-size:12px}
+  .text-gray-500{color:#6b7280}
+  .text-gray-400{color:#9ca3af}
+  .text-green-600{color:#16a34a}
+  .text-red-600{color:#dc2626}
+  .text-blue-600{color:#2563eb}
+  .text-purple-600{color:#9333ea}
+  .text-orange-600{color:#ea580c}
+  .font-bold{font-weight:bold}
+  .font-semibold{font-weight:600}
+  .flex-wrap{flex-wrap:wrap}
+  .flex-1{flex:1}
+  .flex-shrink-0{flex-shrink:0}
+  .w-80{width:320px}
+  details{margin-top:8px}
+  summary{cursor:pointer;font-weight:600;font-size:14px}
+</style>
+</head>
+<body>
+<div id="app" v-cloak style="display:flex;height:100vh;overflow:hidden">
+
+<!-- Sidebar -->
+<div class="sidebar" style="display:flex;flex-direction:column">
+  <div style="padding:16px 16px 20px;border-bottom:1px solid #374151">
+    <div style="font-size:18px;font-weight:bold;color:#fff">JiuwenSkillEvolve</div>
+    <div style="font-size:12px;color:#6b7280;margin-top:2px">Skill Optimization Dashboard</div>
+  </div>
+  <nav style="flex:1;padding:8px 0">
+    <button v-for="t in tabs" :key="t.id"
+      @click="activeTab=t.id"
+      :class="'nav-btn' + (activeTab===t.id ? ' active' : '')">
+      <span style="width:20px;text-align:center">{{ t.icon }}</span> {{ t.label }}
+    </button>
+  </nav>
+  <div style="padding:12px 16px;border-top:1px solid #374151;font-size:12px;color:#6b7280">
+    <p v-if="serverOnline" style="color:#22c55e;margin-top:4px">Server connected</p>
+    <p v-else style="color:#ef4444;margin-top:4px">Server offline</p>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main scroll-thin">
+
+<!-- Datasets Tab -->
+<div v-if="activeTab==='datasets'">
+  <div class="flex items-center" style="justify-content:space-between;margin-bottom:24px">
+    <h2 style="font-size:20px;font-weight:bold">Datasets</h2>
+    <button @click="showUpload=true" class="btn btn-primary">+ Upload Dataset</button>
+  </div>
+
+  <div v-if="showUpload" class="modal-overlay" @click.self="showUpload=false">
+    <div class="modal" style="width:400px">
+      <h3 style="font-weight:bold;font-size:18px;margin-bottom:16px">Upload Dataset</h3>
+      <div style="margin-bottom:12px">
+        <label class="text-sm text-gray-500">Dataset name</label>
+        <input v-model="uploadName" class="input" style="width:100%;margin-top:4px" placeholder="my_dataset">
+      </div>
+      <div style="margin-bottom:12px">
+        <label class="text-sm text-gray-500">JSON file (array of items)</label>
+        <input type="file" accept=".json" @change="onFileSelect" style="width:100%;margin-top:4px;font-size:14px">
+      </div>
+      <div v-if="uploadFile" class="text-sm text-gray-500">Selected: {{ uploadFile.name }}</div>
+      <div class="flex gap-2" style="margin-top:20px">
+        <button @click="doUpload" :disabled="!uploadFile || uploading" class="btn btn-green" style="flex:1">{{ uploading ? 'Uploading...' : 'Upload' }}</button>
+        <button @click="showUpload=false" class="btn" style="background:#e5e7eb">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div v-for="ds in datasets" :key="ds.name" class="card flex items-center" style="justify-content:space-between">
+    <div>
+      <div style="font-weight:600">{{ ds.name }}</div>
+      <div class="flex gap-3" style="margin-top:4px;font-size:12px;color:#6b7280">
+        <span>train: <b>{{ ds.splits.train || 0 }}</b></span>
+        <span>val: <b>{{ ds.splits.val || 0 }}</b></span>
+        <span>test: <b>{{ ds.splits.test || 0 }}</b></span>
+        <span>total: <b>{{ ds.total }}</b></span>
+      </div>
+    </div>
+    <button @click="previewDataset(ds.name)" class="btn" style="background:#dbeafe;color:#1e40af">Preview</button>
+  </div>
+  <div v-if="datasets.length===0" style="text-align:center;color:#9ca3af;padding:48px 0">No datasets found</div>
+
+  <div v-if="previewData" class="modal-overlay" @click.self="previewData=null">
+    <div class="modal" style="width:700px">
+      <div class="flex items-center" style="justify-content:space-between;margin-bottom:12px">
+        <h3 style="font-weight:bold;font-size:18px">Preview: {{ previewData.dataset }}</h3>
+        <select v-model="previewSplit" @change="previewDataset(previewData.dataset)" class="input" style="font-size:14px">
+          <option value="train">train</option>
+          <option value="val">val</option>
+          <option value="test">test</option>
+        </select>
+      </div>
+      <p class="text-sm text-gray-500" style="margin-bottom:12px">Total: {{ previewData.total }} items</p>
+      <div v-for="(item, i) in previewData.items" :key="i" style="background:#f3f4f6;border-radius:6px;padding:8px;margin-bottom:8px;font-size:12px">
+        <pre class="code">{{ JSON.stringify(item, null, 2) }}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Config Tab -->
+<div v-if="activeTab==='config'">
+  <h2 style="font-size:20px;font-weight:bold;margin-bottom:16px">Config Editor</h2>
+  <div class="flex gap-3 items-center" style="margin-bottom:16px">
+    <select v-model="selectedConfigName" @change="loadConfig()" class="input">
+      <option value="">Select config...</option>
+      <option v-for="c in configs" :key="c.name" :value="c.name">{{ c.name }}/{{ c.file }}</option>
+    </select>
+    <button v-if="selectedConfigName" @click="saveConfig()" :disabled="savingConfig" class="btn btn-green">{{ savingConfig ? 'Saving...' : 'Save' }}</button>
+    <span v-if="configSaved" class="text-green-600 text-sm">Saved</span>
+  </div>
+  <div v-if="currentConfig">
+    <div class="flex items-center" style="justify-content:space-between;margin-bottom:4px">
+      <label class="text-sm font-semibold">YAML ({{ currentConfig.path }})</label>
+      <button @click="configRawMode=!configRawMode" class="text-xs text-blue-600" style="background:none;border:none;cursor:pointer">{{ configRawMode ? 'Form mode' : 'Raw mode' }}</button>
+    </div>
+    <textarea v-if="configRawMode" v-model="configRawText" rows="28" style="width:100%;font-family:monospace;font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:12px;background:#f9fafb"></textarea>
+    <div v-else class="card" style="background:#fff">
+      <div v-for="(val, key) in currentConfig.parsed" :key="key" style="margin-bottom:12px">
+        <div v-if="typeof val === 'object' && val !== null">
+          <div class="font-semibold text-sm" style="margin-bottom:4px">{{ key }}</div>
+          <div style="margin-left:16px">
+            <div v-for="(sv, sk) in val" :key="sk" class="flex items-center gap-2" style="margin-bottom:4px">
+              <label class="text-xs text-gray-500" style="width:160px;flex-shrink:0">{{ sk }}</label>
+              <input v-model="val[sk]" @change="syncConfigRaw" style="flex:1;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:12px;font-family:monospace">
+            </div>
+          </div>
+        </div>
+        <div v-else class="flex items-center gap-2">
+          <label class="text-xs text-gray-500" style="width:160px;flex-shrink:0">{{ key }}</label>
+          <input v-model="currentConfig.parsed[key]" @change="syncConfigRaw" style="flex:1;border:1px solid #d1d5db;border-radius:4px;padding:4px 8px;font-size:12px;font-family:monospace">
+        </div>
+      </div>
+    </div>
+    <details v-if="currentConfig.base_config">
+      <summary class="text-sm text-gray-500">Base config</summary>
+      <pre class="code">{{ JSON.stringify(currentConfig.base_config, null, 2) }}</pre>
+    </details>
+  </div>
+  <div v-else-if="!selectedConfigName" style="text-align:center;color:#9ca3af;padding:48px 0">Select a config to edit</div>
+</div>
+
+<!-- Train Tab -->
+<div v-if="activeTab==='train'">
+  <h2 style="font-size:20px;font-weight:bold;margin-bottom:16px">Live Training</h2>
+
+  <div class="card" v-if="!wsConnected">
+    <div class="flex gap-3 items-center">
+      <div>
+        <label class="text-sm text-gray-500" style="display:block;margin-bottom:4px">Config</label>
+        <select v-model="trainConfigPath" class="input" style="width:320px">
+          <option value="">Select config...</option>
+          <option v-for="c in configs" :key="c.path" :value="c.path">{{ c.name }}/{{ c.file }}</option>
+        </select>
+      </div>
+      <button @click="startTraining" :disabled="!trainConfigPath" class="btn btn-green">Start Training</button>
+    </div>
+  </div>
+
+  <div v-if="wsConnected" class="flex items-center gap-3 mb-4">
+    <div class="flex items-center gap-2">
+      <div style="width:12px;height:12px;background:#22c55e;border-radius:50%;animation:pulse 2s infinite"></div>
+      <span class="text-sm font-semibold">Training in progress (Run ID: {{ currentRunId }})</span>
+    </div>
+    <button @click="stopTraining" class="btn btn-red" style="font-size:12px">Stop</button>
+  </div>
+
+  <div v-if="liveHistory.length > 0" class="grid-2">
+    <div class="card">
+      <h3 class="text-sm font-semibold mb-4">Hard / Soft Scores</h3>
+      <canvas ref="liveScoreChart" height="160"></canvas>
+    </div>
+    <div class="card">
+      <h3 class="text-sm font-semibold mb-4">Token Consumption</h3>
+      <canvas ref="liveTokenChart" height="160"></canvas>
+    </div>
+  </div>
+
+  <div v-if="liveHistory.length > 0" class="card">
+    <h3 class="text-sm font-semibold mb-4">Step Timeline</h3>
+    <div class="flex flex-wrap gap-2">
+      <div v-for="h in liveHistory" :key="h.step"
+        @click="loadLiveStepDetail(h.step)"
+        :class="'badge ' + (h.action==='accept_new_best' ? 'badge-green' : h.action==='reject_keep_current' ? 'badge-red' : 'badge-gray')"
+        style="cursor:pointer">
+        <b>Step {{ h.step }}</b> {{ actionLabel(h.action) }} hard={{ (h.rollout_hard||0).toFixed(2) }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Live step detail panel -->
+  <div v-if="liveStepDetail" class="card" style="max-height:400px;overflow-y:auto" class="scroll-thin">
+    <div class="flex items-center" style="justify-content:space-between;margin-bottom:8px">
+      <h3 class="text-sm font-semibold">Step {{ liveStepDetail.step }} Reflection</h3>
+      <div class="flex gap-2">
+        <button v-for="t in stepTabs" :key="t.id" @click="liveStepTab=t.id"
+          :style="'border:none;padding:4px 10px;font-size:12px;cursor:pointer;border-radius:4px;font-weight:' + (liveStepTab===t.id ? 'bold' : 'normal') + ';background:' + (liveStepTab===t.id ? '#dbeafe' : '#f3f4f6') + ';color:' + (liveStepTab===t.id ? '#1e40af' : '#6b7280')">{{ t.label }}</button>
+      </div>
+    </div>
+
+    <!-- Overview -->
+    <div v-if="liveStepTab==='overview'" style="font-size:12px">
+      <div v-if="liveStepDetail.train_gate && liveStepDetail.train_gate.attempts" style="margin-bottom:8px">
+        <div v-for="a in liveStepDetail.train_gate.attempts" :key="a.attempt" style="background:#f3f4f6;border-radius:6px;padding:6px;margin-bottom:4px">
+          <span>Attempt {{ a.attempt }}: hard={{ (a.train_hard||0).toFixed(3) }}</span>
+          <span class="badge" :class="a.passed ? 'badge-green' : 'badge-red'">{{ a.passed ? 'PASS' : 'FAIL' }}</span>
+          <div class="text-gray-500" style="margin-top:2px">{{ a.reason }}</div>
+        </div>
+      </div>
+      <div style="background:#f3f4f6;border-radius:6px;padding:6px">
+        Patches: {{ liveStepDetail.n_patches||0 }} ({{ liveStepDetail.n_failure_patches||0 }}F/{{ liveStepDetail.n_success_patches||0 }}S) | Edits: {{ liveStepDetail.n_edits_merged||0 }} merged / {{ liveStepDetail.n_edits_ranked||0 }} ranked
+      </div>
+    </div>
+
+    <!-- Patches -->
+    <div v-if="liveStepTab==='patches'" style="font-size:12px">
+      <div v-if="!liveStepDetail.patches_detail || liveStepDetail.patches_detail.length===0" style="color:#9ca3af">No patches yet</div>
+      <div v-for="(p, i) in (liveStepDetail.patches_detail || [])" :key="i" style="border-left:3px solid #d1d5db;padding-left:10px;margin-bottom:10px">
+        <div class="flex items-center gap-2" style="margin-bottom:4px">
+          <span class="badge" :class="p.source_type==='failure' ? 'badge-red' : 'badge-green'">{{ p.source_type }}</span>
+          <span class="text-xs text-gray-500">{{ p._filename }}</span>
+        </div>
+        <div v-if="p.patch && p.patch.reasoning" style="background:#f9fafb;border-radius:4px;padding:6px;margin-bottom:4px">{{ p.patch.reasoning }}</div>
+        <div v-for="(e, j) in (p.patch ? (p.patch.edits || []) : [])" :key="j">
+          <span class="badge badge-gray" style="font-size:10px">{{ e.op }}</span>
+          <pre class="code" style="font-size:11px;max-height:120px;white-space:pre-wrap">{{ e.content }}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Merged -->
+    <div v-if="liveStepTab==='merged'" style="font-size:12px">
+      <div v-if="!liveStepDetail.merged_patch_detail" style="color:#9ca3af">No merged patch yet</div>
+      <div v-else>
+        <div style="background:#fffbeb;border-radius:6px;padding:8px;margin-bottom:8px">{{ liveStepDetail.merged_patch_detail.reasoning }}</div>
+        <div v-for="(e, i) in (liveStepDetail.merged_patch_detail.edits || [])" :key="i" style="border-left:3px solid #2563eb;padding-left:10px;margin-bottom:8px">
+          <div class="flex gap-2 items-center" style="margin-bottom:4px">
+            <span class="badge badge-gray" style="font-size:10px">{{ e.op }}</span>
+            <span v-if="e.source_type" class="badge" :class="e.source_type==='failure' ? 'badge-red' : 'badge-green'" style="font-size:10px">{{ e.source_type }}</span>
+          </div>
+          <pre class="code" style="font-size:11px;max-height:150px;white-space:pre-wrap">{{ e.content }}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edits -->
+    <div v-if="liveStepTab==='edits'" style="font-size:12px">
+      <div v-if="!liveStepDetail.edit_apply_report" style="color:#9ca3af">No edit report yet</div>
+      <div v-else>
+        <div v-for="(e, i) in liveStepDetail.edit_apply_report" :key="i" style="margin-bottom:6px">
+          <span class="badge" :class="e.status && e.status.indexOf('applied')>=0 ? 'badge-green' : 'badge-red'" style="font-size:10px">{{ e.status }}</span>
+          <pre class="code" style="font-size:11px;max-height:100px;white-space:pre-wrap">{{ e.content_preview || '' }}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rollouts -->
+    <div v-if="liveStepTab==='rollouts'" style="font-size:12px">
+      <div v-if="!liveStepDetail.rollouts || liveStepDetail.rollouts.length===0" style="color:#9ca3af">No rollout data yet</div>
+      <div v-else>
+        <div class="flex gap-3" style="margin-bottom:8px">
+          <span>Total: {{ liveStepDetail.rollouts.length }}</span>
+          <span class="text-green-600">OK: {{ liveStepDetail.rollouts.filter(function(r){return r.hard===1}).length }}</span>
+          <span class="text-red-600">Wrong: {{ liveStepDetail.rollouts.filter(function(r){return r.hard!==1}).length }}</span>
+        </div>
+        <table>
+          <thead><tr><th>ID</th><th>Result</th><th>Predicted</th></tr></thead>
+          <tbody>
+            <tr v-for="r in liveStepDetail.rollouts" :key="r.id" :style="r.hard===1 ? '' : 'background:#fef2f2'">
+              <td style="font-family:monospace;font-size:10px">{{ (r.id||'').substring(0,10) }}</td>
+              <td><span :class="r.hard===1 ? 'text-green-600' : 'text-red-600'">{{ r.hard===1 ? 'OK' : 'X' }}</span></td>
+              <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis">{{ r.predicted_answer || '' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Skill -->
+    <div v-if="liveStepTab==='skill'" style="font-size:12px">
+      <div v-if="!liveStepDetail.candidate_skill" style="color:#9ca3af">No candidate skill yet</div>
+      <pre v-else class="code" style="font-size:11px;max-height:300px;white-space:pre-wrap">{{ liveStepDetail.candidate_skill }}</pre>
+    </div>
+
+    <!-- Raw -->
+    <div v-if="liveStepTab==='raw'">
+      <pre class="code" style="font-size:10px">{{ JSON.stringify(liveStepDetail, null, 2) }}</pre>
+    </div>
+  </div>
+
+  <div class="log-box scroll-thin" ref="logContainer">
+    <div v-for="(line, i) in logLines" :key="i" :class="'log-line ' + logLineClass(line)">{{ line }}</div>
+    <div v-if="logLines.length===0" style="color:#6b7280;font-size:14px">Waiting for output...</div>
+  </div>
+</div>
+
+<!-- Envs Tab -->
+<div v-if="activeTab==='envs'">
+  <div class="flex items-center" style="justify-content:space-between;margin-bottom:16px">
+    <h2 style="font-size:20px;font-weight:bold">Environment Adapters</h2>
+    <button @click="showCreateEnv=true" class="btn btn-primary">+ New Env</button>
+  </div>
+
+  <!-- Create env modal -->
+  <div v-if="showCreateEnv" class="modal-overlay" @click.self="showCreateEnv=false">
+    <div class="modal" style="width:400px">
+      <h3 style="font-weight:bold;font-size:18px;margin-bottom:16px">Create New Environment</h3>
+      <div style="margin-bottom:12px">
+        <label class="text-sm text-gray-500">Env name (snake_case, e.g. my_benchmark)</label>
+        <input v-model="newEnvName" class="input" style="width:100%;margin-top:4px" placeholder="my_benchmark">
+      </div>
+      <p class="text-xs text-gray-500" style="margin-bottom:12px">This will create: envs folder (from template), config file, and auto-register in scripts/train.py + eval_only.py</p>
+      <div class="flex gap-2">
+        <button @click="createEnv" :disabled="!newEnvName || creatingEnv" class="btn btn-green" style="flex:1">{{ creatingEnv ? 'Creating...' : 'Create' }}</button>
+        <button @click="showCreateEnv=false" class="btn" style="background:#e5e7eb">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Env list -->
+  <div v-if="!selectedEnv" class="flex" style="gap:16px;flex-wrap:wrap">
+    <div v-for="e in envs" :key="e.name" class="card" style="width:300px;cursor:pointer" @click="browseEnv(e.name)">
+      <div class="flex items-center" style="justify-content:space-between">
+        <span style="font-weight:600">{{ e.name }}</span>
+        <div class="flex gap-2">
+          <span v-if="e.registered_train" class="badge badge-green" style="font-size:10px">train</span>
+          <span v-if="e.registered_eval" class="badge badge-green" style="font-size:10px">eval</span>
+          <span v-if="!e.registered_train && !e.registered_eval" class="badge badge-red" style="font-size:10px">unregistered</span>
+        </div>
+      </div>
+      <div class="flex gap-2" style="margin-top:8px;font-size:12px;color:#6b7280">
+        <span v-if="e.has_prompts">prompts/</span>
+        <span v-if="e.has_skills">skills/</span>
+        <span>{{ e.py_files.length }} .py</span>
+      </div>
+      <div class="flex gap-2" style="margin-top:8px">
+        <span v-for="f in e.py_files" :key="f" class="badge badge-gray" style="font-size:10px">{{ f }}</span>
+      </div>
+    </div>
+    <div v-if="envs.length===0" style="text-align:center;color:#9ca3af;padding:48px 0">No envs found</div>
+  </div>
+
+  <!-- Env detail: file tree + editor -->
+  <div v-if="selectedEnv">
+    <div class="flex items-center" style="gap:12px;margin-bottom:16px">
+      <button @click="selectedEnv=null;envFileContent=''" class="btn" style="background:#e5e7eb;font-size:12px">&larr; Back</button>
+      <h3 style="font-size:18px;font-weight:bold">{{ selectedEnv.name }}</h3>
+      <div class="flex gap-2">
+        <span v-if="selectedEnv.registration.train" class="badge badge-green" style="font-size:10px">train.py</span>
+        <span v-if="selectedEnv.registration.eval" class="badge badge-green" style="font-size:10px">eval_only.py</span>
+        <button v-if="!selectedEnv.registration.train || !selectedEnv.registration.eval" @click="registerEnv(selectedEnv.name)" class="btn" style="background:#dbeafe;color:#1e40af;font-size:12px">Register</button>
+      </div>
+      <button @click="deleteEnv(selectedEnv.name)" class="btn btn-red" style="font-size:12px;margin-left:auto">Delete Env</button>
+    </div>
+
+    <div class="flex" style="gap:16px">
+      <!-- File tree -->
+      <div style="width:240px;flex-shrink:0">
+        <div class="card" style="padding:8px">
+          <div style="font-weight:600;font-size:12px;color:#6b7280;margin-bottom:8px">FILES</div>
+          <env-tree-node v-for="child in selectedEnv.tree.children" :key="child.path" :node="child" :selected-path="selectedFilePath" @select="selectEnvFile"></env-tree-node>
+        </div>
+      </div>
+
+      <!-- Editor -->
+      <div style="flex:1;min-width:0">
+        <div v-if="selectedFilePath" class="card" style="padding:0;overflow:hidden">
+          <div class="flex items-center" style="justify-content:space-between;padding:8px 12px;border-bottom:1px solid #e5e7eb;background:#f9fafb">
+            <span class="text-sm font-semibold" style="font-family:monospace">{{ selectedFilePath }}</span>
+            <div class="flex gap-2">
+              <button @click="saveEnvFile" :disabled="savingEnvFile" class="btn btn-green" style="font-size:12px">{{ savingEnvFile ? 'Saving...' : 'Save' }}</button>
+              <span v-if="envFileSaved" class="text-green-600 text-sm">Saved</span>
+            </div>
+          </div>
+          <textarea v-model="envFileContent" rows="30" style="width:100%;font-family:'Cascadia Code',Consolas,monospace;font-size:12px;border:none;padding:12px;background:#1e1e1e;color:#d4d4d4;line-height:1.5;resize:none"></textarea>
+        </div>
+        <div v-else style="text-align:center;color:#9ca3af;padding:48px 0">Select a file to view/edit</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Analysis Tab -->
+<div v-if="activeTab==='analysis'">
+  <h2 style="font-size:20px;font-weight:bold;margin-bottom:16px">Pipeline Analysis</h2>
+
+  <div class="flex gap-3 items-center mb-6">
+    <select v-model="selectedRun" @change="loadRunDetail" class="input">
+      <option value="">Select a training run...</option>
+      <option v-for="r in runs" :key="r.name" :value="r.name">{{ runOptionLabel(r) }}</option>
+    </select>
+    <span v-if="runDetail" class="text-sm text-gray-500">
+      {{ runDetail.steps.length }} steps | {{ runDetail.skills.length }} skills | best={{ (runDetail.state ? runDetail.state.best_score : 0).toFixed(3) }}
+    </span>
+  </div>
+
+  <div v-if="runDetail && runDetail.history">
+    <!-- Pipeline Phase Overview -->
+    <div class="flex gap-3 mb-6" style="flex-wrap:wrap">
+      <div class="card" style="flex:1;min-width:180px;padding:12px" :style="phaseStatusStyle('phase1', runSummary)">
+        <div style="font-size:11px;color:#6b7280;margin-bottom:4px">PHASE 1</div>
+        <div style="font-weight:bold;font-size:14px">SkillOpt</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px">{{ runDetail.steps.length }} steps, {{ runDetail.skills.length }} versions</div>
+      </div>
+      <div class="card" style="flex:1;min-width:180px;padding:12px" :style="phaseStatusStyle('phase2', gepaData)">
+        <div style="font-size:11px;color:#6b7280;margin-bottom:4px">PHASE 2</div>
+        <div style="font-weight:bold;font-size:14px">GEPA</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px">{{ gepaData && gepaData.performed ? (gepaData.audit ? gepaData.audit.gepa_result.n_candidates + ' candidates' : 'done') : 'skipped' }}</div>
+      </div>
+      <div class="card" style="flex:1;min-width:180px;padding:12px" :style="phaseStatusStyle('phase3', proxData)">
+        <div style="font-size:11px;color:#6b7280;margin-bottom:4px">PHASE 3</div>
+        <div style="font-weight:bold;font-size:14px">Prox Shrink</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px">{{ proxData && proxData.performed !== undefined ? (proxData.shrunk ? 'shrunk ' + (proxData.compression*100).toFixed(1) + '%' : 'no shrink') : 'not found' }}</div>
+      </div>
+      <div class="card" style="flex:1;min-width:180px;padding:12px" :style="phaseStatusStyle('phase4', testEval)">
+        <div style="font-size:11px;color:#6b7280;margin-bottom:4px">PHASE 4</div>
+        <div style="font-weight:bold;font-size:14px">Hold Out Test</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px">{{ Object.keys(testEval).length }} variants tested</div>
+      </div>
+    </div>
+
+    <!-- Phase 1: SkillOpt -->
+    <div style="border-left:4px solid #3b82f6;padding-left:16px;margin-bottom:24px">
+      <h3 style="font-size:16px;font-weight:bold;color:#1e40af;margin-bottom:12px">Phase 1: SkillOpt Training</h3>
+
+      <div class="grid-4">
+        <div class="stat-card"><div class="stat-num text-blue-600">{{ runDetail.steps.length }}</div><div class="stat-label">Total Steps</div></div>
+        <div class="stat-card"><div class="stat-num text-green-600">{{ (((runDetail.state ? runDetail.state.best_score : 0)||0)*100).toFixed(1) }}%</div><div class="stat-label">Best Val Score</div></div>
+        <div class="stat-card"><div class="stat-num text-purple-600">{{ runDetail.skills.length }}</div><div class="stat-label">Skill Versions</div></div>
+        <div class="stat-card"><div class="stat-num text-orange-600">{{ totalTokens(runDetail.history) }}</div><div class="stat-label">Total Tokens</div></div>
+      </div>
+
+      <div class="grid-2" style="margin-top:12px">
+        <div class="card"><h3 class="text-sm font-semibold mb-4">Score Curve</h3><canvas ref="analysisScoreChart" height="180"></canvas></div>
+        <div class="card"><h3 class="text-sm font-semibold mb-4">Token Consumption</h3><canvas ref="analysisTokenChart" height="180"></canvas></div>
+        <div class="card"><h3 class="text-sm font-semibold mb-4">Timing Breakdown</h3><canvas ref="analysisTimingChart" height="180"></canvas></div>
+        <div class="card"><h3 class="text-sm font-semibold mb-4">Patches & Edits</h3><canvas ref="analysisActionChart" height="180"></canvas></div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h3 class="text-sm font-semibold mb-4">Step Details (click row for reflection detail)</h3>
+        <div style="overflow-x:auto" class="scroll-thin">
+          <table>
+            <thead><tr>
+              <th>Step</th><th>Epoch</th><th>Rollout</th><th>Selection</th><th>Patches</th><th>Gate</th><th>Action</th><th>Wall(s)</th><th>Tokens</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="h in runDetail.history" :key="h.step" @click="loadStepDetail(h.step)" :style="h.action==='accept_new_best' ? 'background:#f0fdf4;cursor:pointer' : 'cursor:pointer'">
+                <td class="font-bold">{{ h.step }}</td>
+                <td>{{ h.epoch }}</td>
+                <td>{{ (h.rollout_hard||0).toFixed(3) }}</td>
+                <td>{{ (h.selection_hard||0).toFixed(3) }}</td>
+                <td>{{ h.n_patches || 0 }} ({{ h.n_failure_patches||0 }}F/{{ h.n_success_patches||0 }}S)</td>
+                <td>
+                  <span v-if="h.train_gate && h.train_gate.enabled" :class="h.train_gate.attempts[0].passed ? 'text-green-600' : 'text-red-600'">{{ h.train_gate.attempts[0].passed ? 'PASS' : 'FAIL' }}</span>
+                  <span v-else class="text-gray-400">-</span>
+                </td>
+                <td><span :class="actionColor(h.action)">{{ actionLabel(h.action) }}</span></td>
+                <td>{{ (h.wall_time_s||0).toFixed(0) }}</td>
+                <td>{{ stepTokens(h).toLocaleString() }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 2: GEPA -->
+    <div v-if="gepaData && gepaData.performed" style="border-left:4px solid #8b5cf6;padding-left:16px;margin-bottom:24px">
+      <h3 style="font-size:16px;font-weight:bold;color:#6d28d9;margin-bottom:12px">Phase 2: GEPA Process-Driven Reflection</h3>
+
+      <div class="grid-4">
+        <div class="stat-card"><div class="stat-num text-purple-600">{{ gepaData.audit ? gepaData.audit.gepa_result.best_val_score.toFixed(3) : '-' }}</div><div class="stat-label">Best Val Score</div></div>
+        <div class="stat-card"><div class="stat-num text-purple-600">{{ gepaData.audit ? gepaData.audit.gepa_result.n_candidates : '-' }}</div><div class="stat-label">Candidates</div></div>
+        <div class="stat-card"><div class="stat-num text-purple-600">{{ gepaData.iterations ? gepaData.iterations.length : 0 }}</div><div class="stat-label">Iterations</div></div>
+        <div class="stat-card"><div class="stat-num text-purple-600">{{ gepaData.audit ? ((gepaData.audit.best_skill_chars - gepaData.audit.original_skill_chars >= 0 ? '+' : '') + (gepaData.audit.best_skill_chars - gepaData.audit.original_skill_chars)) : '-' }}</div><div class="stat-label">Char Delta</div></div>
+      </div>
+
+      <div v-if="gepaData.run_log && gepaData.run_log.length" class="card" style="margin-top:12px">
+        <h3 class="text-sm font-semibold mb-4">GEPA Iteration Log</h3>
+        <div style="overflow-x:auto" class="scroll-thin">
+          <table>
+            <thead><tr><th>Iter</th><th>Selected</th><th>Subsample IDs</th><th>Before Scores</th><th>After Scores</th><th>Accepted</th></tr></thead>
+            <tbody>
+              <tr v-for="log in gepaData.run_log" :key="log.i">
+                <td>{{ log.i }}</td>
+                <td>{{ log.selected_program_candidate }}</td>
+                <td style="font-size:11px;font-family:monospace">{{ (log.subsample_ids||[]).join(', ') }}</td>
+                <td style="font-size:11px">{{ (log.subsample_scores||[]).join(', ') }}</td>
+                <td style="font-size:11px">{{ (log.new_subsample_scores||[]).join(', ') }}</td>
+                <td><span :class="log.accepted ? 'text-green-600' : 'text-gray-400'">{{ log.accepted ? 'YES' : 'no' }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <details class="card" style="margin-top:12px">
+        <summary>GEPA Best Skill ({{ gepaData.audit ? gepaData.audit.best_skill_chars : '?' }} chars)</summary>
+        <pre class="code" style="max-height:400px">{{ gepaData.best_skill || 'N/A' }}</pre>
+      </details>
+
+      <details class="card">
+        <summary>GEPA Audit JSON</summary>
+        <pre class="code">{{ JSON.stringify(gepaData.audit, null, 2) }}</pre>
+      </details>
+    </div>
+
+    <!-- Phase 3: Prox Shrink -->
+    <div v-if="proxData && proxData.performed !== undefined" style="border-left:4px solid #f59e0b;padding-left:16px;margin-bottom:24px">
+      <h3 style="font-size:16px;font-weight:bold;color:#b45309;margin-bottom:12px">Phase 3: Prox Shrink (Post-Training Compression)</h3>
+
+      <div class="grid-4">
+        <div class="stat-card"><div class="stat-num" :class="proxData.shrunk ? 'text-green-600' : 'text-gray-500'">{{ proxData.shrunk ? 'Shrunk' : 'No Shrink' }}</div><div class="stat-label">Status</div></div>
+        <div class="stat-card"><div class="stat-num text-orange-600">{{ proxData.base_chars || 0 }} &rarr; {{ proxData.final_chars || proxData.base_chars || 0 }}</div><div class="stat-label">Chars</div></div>
+        <div class="stat-card"><div class="stat-num text-orange-600">{{ proxData.compression ? (proxData.compression*100).toFixed(1)+'%' : '0%' }}</div><div class="stat-label">Compression</div></div>
+        <div class="stat-card"><div class="stat-num text-orange-600">{{ (proxData.base_hard||0).toFixed(3) }} &rarr; {{ (proxData.final_hard||0).toFixed(3) }}</div><div class="stat-label">Hard Score</div></div>
+      </div>
+
+      <div v-if="proxData.rounds && proxData.rounds.length" style="margin-top:12px">
+        <div v-for="r in proxData.rounds" :key="r.round" class="card" style="margin-bottom:12px;padding:12px">
+          <div class="flex items-center gap-2" style="margin-bottom:8px">
+            <span class="font-bold">Round {{ r.round }}</span>
+            <span class="badge" :class="r.gate_passed ? 'badge-green' : 'badge-red'">{{ r.gate_passed ? 'GATE PASSED' : 'GATE FAILED' }}</span>
+            <span class="text-xs text-gray-500">{{ r.trial_chars }} chars (from {{ r.skill_chars }})</span>
+            <span class="text-xs">hard: {{ (r.ref_hard||0).toFixed(3) }} &rarr; {{ (r.trial_hard||0).toFixed(3) }}</span>
+          </div>
+          <div v-if="r.gate_reason" style="font-size:12px;color:#dc2626;margin-bottom:6px">Gate: {{ r.gate_reason }}</div>
+
+          <!-- LOO Utility Table -->
+          <div v-if="r.units && r.units.length" style="margin-bottom:8px">
+            <div class="text-xs font-semibold text-gray-500" style="margin-bottom:4px">Leave-One-Out Utility Audit:</div>
+            <table style="font-size:11px">
+              <thead><tr><th>#</th><th>Section</th><th>Chars</th><th>&Delta;hard if removed</th><th>&Delta;soft if removed</th><th>Verdict</th></tr></thead>
+              <tbody>
+                <tr v-for="u in r.units" :key="u.id">
+                  <td>{{ u.id }}</td>
+                  <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis">{{ u.header }}</td>
+                  <td>{{ u.char_len }}</td>
+                  <td :class="u.utility_hard > 0 ? 'text-green-600' : u.utility_hard < 0 ? 'text-red-600' : ''">{{ (u.utility_hard||0).toFixed(4) }}</td>
+                  <td :class="u.utility_soft > 0 ? 'text-green-600' : u.utility_soft < 0 ? 'text-red-600' : ''">{{ (u.utility_soft||0).toFixed(4) }}</td>
+                  <td>{{ u.utility_hard > 0 ? 'KEEP' : u.utility_hard < 0 ? 'REMOVABLE' : 'NEUTRAL' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <details v-if="r.shrink_reasoning">
+            <summary style="font-size:12px">Shrinker Reasoning</summary>
+            <div style="font-size:12px;background:#fffbeb;border-radius:6px;padding:8px;margin-top:4px">{{ r.shrink_reasoning }}</div>
+          </details>
+        </div>
+      </div>
+
+      <div v-if="proxData.trials && proxData.trials.length" class="flex gap-2" style="margin-bottom:12px">
+        <div v-for="t in proxData.trials" :key="t.filename" class="card" style="flex:1;padding:8px">
+          <div class="text-xs font-semibold" style="margin-bottom:4px">{{ t.filename }}</div>
+          <pre class="code" style="font-size:10px;max-height:200px;white-space:pre-wrap">{{ t.content.substring(0, 500) }}...</pre>
+        </div>
+      </div>
+
+      <details class="card">
+        <summary>Prox Audit JSON</summary>
+        <pre class="code">{{ JSON.stringify(proxData, null, 2) }}</pre>
+      </details>
+    </div>
+
+    <!-- Phase 4: Hold Out Test -->
+    <div v-if="Object.keys(testEval).length > 0" style="border-left:4px solid #10b981;padding-left:16px;margin-bottom:24px">
+      <h3 style="font-size:16px;font-weight:bold;color:#047857;margin-bottom:12px">Phase 4: Hold Out Test (valid_unseen)</h3>
+
+      <!-- 4-way comparison table -->
+      <div class="card" style="margin-bottom:12px">
+        <h3 class="text-sm font-semibold mb-4">Test Score Comparison</h3>
+        <table>
+          <thead><tr><th>Skill Variant</th><th>Total Items</th><th>Hard Accuracy</th><th>Soft Accuracy</th><th>&Delta; vs Baseline</th></tr></thead>
+          <tbody>
+            <tr v-for="v in testVariants" :key="v.key">
+              <td><span class="badge" :class="v.badgeClass">{{ v.label }}</span></td>
+              <td>{{ (testEval[v.key] && testEval[v.key].overall) ? testEval[v.key].overall.total : '-' }}</td>
+              <td>{{ (testEval[v.key] && testEval[v.key].overall) ? (testEval[v.key].overall.hard_acc*100).toFixed(2)+'%' : '-' }}</td>
+              <td>{{ (testEval[v.key] && testEval[v.key].overall && testEval[v.key].overall.soft_acc !== undefined) ? (testEval[v.key].overall.soft_acc*100).toFixed(2)+'%' : '-' }}</td>
+              <td v-if="v.key !== 'baseline' && testEval.baseline && testEval[v.key] && testEval[v.key].overall && testEval.baseline.overall" :class="(testEval[v.key].overall.hard_acc - testEval.baseline.overall.hard_acc) >= 0 ? 'text-green-600' : 'text-red-600'">
+                {{ ((testEval[v.key].overall.hard_acc - testEval.baseline.overall.hard_acc)*100).toFixed(2) }}%
+              </td>
+              <td v-else class="text-gray-400">baseline</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 4-way comparison bar chart -->
+      <div class="card">
+        <h3 class="text-sm font-semibold mb-4">Hard Accuracy Comparison</h3>
+        <canvas ref="testCompareChart" height="200"></canvas>
+      </div>
+
+      <!-- Summary from summary.json -->
+      <div v-if="runSummary" class="grid-4" style="margin-top:12px">
+        <div class="stat-card"><div class="stat-num text-green-600">{{ runSummary.total_accepts || 0 }}</div><div class="stat-label">Accepts</div></div>
+        <div class="stat-card"><div class="stat-num text-red-600">{{ runSummary.total_rejects || 0 }}</div><div class="stat-label">Rejects</div></div>
+        <div class="stat-card"><div class="stat-num text-blue-600">{{ runSummary.best_step || '-' }}</div><div class="stat-label">Best Step</div></div>
+        <div class="stat-card"><div class="stat-num text-orange-600">{{ runSummary.total_wall_time_s ? (runSummary.total_wall_time_s/60).toFixed(0)+'min' : '-' }}</div><div class="stat-label">Wall Time</div></div>
+      </div>
+
+      <!-- Epoch stats -->
+      <div v-if="runSummary && runSummary.epoch_stats" class="card" style="margin-top:12px">
+        <h3 class="text-sm font-semibold mb-4">Per-Epoch Statistics</h3>
+        <table>
+          <thead><tr><th>Epoch</th><th>Steps</th><th>Accepts</th><th>Rejects</th><th>Skips</th><th>Best Score at End</th></tr></thead>
+          <tbody>
+            <tr v-for="e in runSummary.epoch_stats" :key="e.epoch">
+              <td class="font-bold">{{ e.epoch }}</td>
+              <td style="font-size:11px">{{ e.steps.join(', ') }}</td>
+              <td class="text-green-600">{{ e.accepts }}</td>
+              <td class="text-red-600">{{ e.rejects }}</td>
+              <td>{{ e.skips }}</td>
+              <td>{{ (e.best_score_at_epoch_end*100).toFixed(1) }}%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div v-if="stepDetail" class="modal-overlay" @click.self="stepDetail=null;stepDetailTab='overview'">
+      <div class="modal" style="width:860px;max-height:85vh">
+        <!-- Header -->
+        <div class="flex items-center" style="justify-content:space-between;margin-bottom:12px">
+          <h3 style="font-weight:bold;font-size:18px">Step {{ stepDetail.step }} Detail</h3>
+          <button @click="stepDetail=null;stepDetailTab='overview'" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280">&times;</button>
+        </div>
+
+        <!-- Summary stats -->
+        <div class="grid-2" style="font-size:13px;margin-bottom:12px">
+          <div style="background:#f3f4f6;border-radius:6px;padding:8px"><b>Rollout:</b> hard={{ (stepDetail.rollout_hard||0).toFixed(3) }} soft={{ (stepDetail.rollout_soft||0).toFixed(3) }}</div>
+          <div style="background:#f3f4f6;border-radius:6px;padding:8px"><b>Selection:</b> hard={{ (stepDetail.selection_hard||0).toFixed(3) }}</div>
+          <div style="background:#f3f4f6;border-radius:6px;padding:8px"><b>Action:</b> <span :class="actionColor(stepDetail.action)">{{ actionLabel(stepDetail.action) }}</span></div>
+          <div style="background:#f3f4f6;border-radius:6px;padding:8px"><b>Wall:</b> {{ (stepDetail.wall_time_s||0).toFixed(1) }}s</div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex gap-2" style="border-bottom:2px solid #e5e7eb;margin-bottom:12px">
+          <button v-for="t in stepTabs" :key="t.id" @click="stepDetailTab=t.id"
+            :style="'border:none;background:none;padding:6px 14px;font-size:13px;cursor:pointer;font-weight:' + (stepDetailTab===t.id ? 'bold' : 'normal') + ';color:' + (stepDetailTab===t.id ? '#2563eb' : '#6b7280') + ';border-bottom:2px solid ' + (stepDetailTab===t.id ? '#2563eb' : 'transparent') + ';margin-bottom:-2px'">{{ t.label }}</button>
+        </div>
+
+        <!-- Overview tab -->
+        <div v-if="stepDetailTab==='overview'" style="font-size:13px">
+          <div v-if="stepDetail.train_gate && stepDetail.train_gate.attempts" class="mb-4">
+            <div class="font-semibold" style="margin-bottom:6px">Gate Attempts</div>
+            <div v-for="a in stepDetail.train_gate.attempts" :key="a.attempt" style="background:#f3f4f6;border-radius:6px;padding:10px;margin-bottom:6px">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold">Attempt {{ a.attempt }}</span>
+                <span>hard={{ (a.train_hard||0).toFixed(3) }}</span>
+                <span class="badge" :class="a.passed ? 'badge-green' : 'badge-red'">{{ a.passed ? 'PASS' : 'FAIL' }}</span>
+              </div>
+              <div class="text-gray-500" style="margin-top:4px;font-size:12px">{{ a.reason }}</div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <div class="font-semibold" style="margin-bottom:6px">Patches Summary</div>
+            <div style="background:#f3f4f6;border-radius:6px;padding:10px;font-size:12px">
+              <div>Total patches: <b>{{ stepDetail.n_patches || 0 }}</b> (Failure: {{ stepDetail.n_failure_patches||0 }} / Success: {{ stepDetail.n_success_patches||0 }})</div>
+              <div>Edits merged: <b>{{ stepDetail.n_edits_merged||0 }}</b>, ranked: <b>{{ stepDetail.n_edits_ranked||0 }}</b>, budget: {{ stepDetail.edit_budget||0 }}</div>
+              <div v-if="stepDetail.edit_apply_summary">Applied: {{ stepDetail.edit_apply_summary.applied||0 }}/{{ stepDetail.edit_apply_summary.total||0 }}, skipped: {{ stepDetail.edit_apply_summary.skipped||0 }}, errors: {{ stepDetail.edit_apply_summary.errors||0 }}</div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div>
+              <div class="font-semibold" style="margin-bottom:6px">Tokens</div>
+              <div style="background:#f3f4f6;border-radius:6px;padding:10px;font-size:12px">
+                <div v-for="(v, k) in stepDetail.tokens" :key="k" style="margin-bottom:4px">
+                  <b>{{ k }}</b>: calls={{ v.calls }}, prompt={{ (v.prompt_tokens||0).toLocaleString() }}, completion={{ (v.completion_tokens||0).toLocaleString() }}
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="font-semibold" style="margin-bottom:6px">Timing</div>
+              <div style="background:#f3f4f6;border-radius:6px;padding:10px;font-size:12px">
+                <div v-for="(v, k) in stepDetail.timing" :key="k">{{ k }}: {{ (v||0).toFixed(1) }}s</div>
+                <div class="font-bold" style="margin-top:4px">Total wall: {{ (stepDetail.wall_time_s||0).toFixed(1) }}s</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Patches tab -->
+        <div v-if="stepDetailTab==='patches'" style="font-size:13px;max-height:55vh;overflow-y:auto" class="scroll-thin">
+          <div v-if="!stepDetail.patches_detail || stepDetail.patches_detail.length===0" style="color:#9ca3af;text-align:center;padding:24px">No patch files found</div>
+          <div v-for="(p, i) in stepDetail.patches_detail" :key="i" class="card" style="margin-bottom:12px;padding:12px">
+            <div class="flex items-center gap-2" style="margin-bottom:8px">
+              <span class="badge" :class="p.source_type==='failure' ? 'badge-red' : 'badge-green'">{{ p.source_type || 'unknown' }}</span>
+              <span class="text-xs text-gray-500">{{ p._filename }}</span>
+              <span v-if="p.batch_size" class="text-xs text-gray-500">batch={{ p.batch_size }}</span>
+            </div>
+            <div v-if="p.failure_summary && p.failure_summary.length" style="margin-bottom:8px">
+              <div class="text-xs font-semibold text-gray-500" style="margin-bottom:4px">Failure Analysis:</div>
+              <div v-for="fs in p.failure_summary" :key="fs.failure_type" style="font-size:12px;background:#fef2f2;border-radius:4px;padding:6px;margin-bottom:4px">
+                <b>{{ fs.failure_type }}</b> (x{{ fs.count }}): {{ fs.description }}
+              </div>
+            </div>
+            <div v-if="p.patch && p.patch.reasoning" style="font-size:12px;background:#f9fafb;border-radius:6px;padding:8px;margin-bottom:8px">
+              <div class="font-semibold text-gray-500" style="margin-bottom:4px">Reasoning:</div>
+              {{ p.patch.reasoning }}
+            </div>
+            <div v-if="p.patch && p.patch.edits">
+              <div class="text-xs font-semibold text-gray-500" style="margin-bottom:4px">Edits ({{ p.patch.edits.length }}):</div>
+              <div v-for="(e, j) in p.patch.edits" :key="j" style="border-left:3px solid #d1d5db;padding-left:10px;margin-bottom:8px">
+                <div class="flex gap-2 items-center" style="margin-bottom:4px">
+                  <span class="badge badge-gray">{{ e.op }}</span>
+                  <span v-if="e.support_count" class="text-xs text-gray-500">support={{ e.support_count }}</span>
+                </div>
+                <div v-if="e.target" class="text-xs text-gray-500" style="margin-bottom:4px">Target: <code style="background:#f3f4f6;padding:2px 4px;border-radius:3px;font-size:11px">{{ e.target.substring(0, 80) }}{{ e.target.length > 80 ? '...' : '' }}</code></div>
+                <pre class="code" style="font-size:11px;max-height:200px;white-space:pre-wrap">{{ e.content }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Merged tab -->
+        <div v-if="stepDetailTab==='merged'" style="font-size:13px;max-height:55vh;overflow-y:auto" class="scroll-thin">
+          <div v-if="!stepDetail.merged_patch_detail" style="color:#9ca3af;text-align:center;padding:24px">No merged patch found</div>
+          <div v-else>
+            <div class="card" style="padding:12px;margin-bottom:12px">
+              <div class="font-semibold text-gray-500" style="margin-bottom:6px">Merge Reasoning:</div>
+              <div style="font-size:12px;background:#fffbeb;border-radius:6px;padding:8px">{{ stepDetail.merged_patch_detail.reasoning }}</div>
+            </div>
+            <div class="card" style="padding:12px">
+              <div class="font-semibold text-gray-500" style="margin-bottom:8px">Merged Edits ({{ (stepDetail.merged_patch_detail.edits || []).length }}):</div>
+              <div v-for="(e, i) in stepDetail.merged_patch_detail.edits" :key="i" style="border-left:3px solid #2563eb;padding-left:10px;margin-bottom:12px">
+                <div class="flex gap-2 items-center" style="margin-bottom:4px">
+                  <span class="badge badge-gray">{{ e.op }}</span>
+                  <span v-if="e.source_type" class="badge" :class="e.source_type==='failure' ? 'badge-red' : 'badge-green'">{{ e.source_type }}</span>
+                  <span v-if="e.support_count" class="text-xs text-gray-500">support={{ e.support_count }}</span>
+                </div>
+                <div v-if="e.target" class="text-xs text-gray-500" style="margin-bottom:4px">Target: <code style="background:#f3f4f6;padding:2px 4px;border-radius:3px;font-size:11px">{{ e.target.substring(0, 100) }}{{ e.target.length > 100 ? '...' : '' }}</code></div>
+                <pre class="code" style="font-size:11px;max-height:250px;white-space:pre-wrap">{{ e.content }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edits Applied tab -->
+        <div v-if="stepDetailTab==='edits'" style="font-size:13px;max-height:55vh;overflow-y:auto" class="scroll-thin">
+          <div v-if="!stepDetail.edit_apply_report" style="color:#9ca3af;text-align:center;padding:24px">No edit apply report found</div>
+          <div v-else>
+            <div class="flex gap-3 mb-4">
+              <div class="stat-card" style="flex:1"><div class="stat-num text-blue-600">{{ stepDetail.edit_apply_report.length }}</div><div class="stat-label">Total Edits</div></div>
+              <div class="stat-card" style="flex:1"><div class="stat-num text-green-600">{{ stepDetail.edit_apply_report.filter(function(e){return e.status && e.status.indexOf('applied')>=0}).length }}</div><div class="stat-label">Applied</div></div>
+              <div class="stat-card" style="flex:1"><div class="stat-num text-red-600">{{ stepDetail.edit_apply_report.filter(function(e){return e.status && e.status.indexOf('skip')>=0}).length }}</div><div class="stat-label">Skipped</div></div>
+            </div>
+            <div v-for="(e, i) in stepDetail.edit_apply_report" :key="i" class="card" style="padding:10px;margin-bottom:8px">
+              <div class="flex items-center gap-2" style="margin-bottom:6px">
+                <span class="badge" :class="e.status && e.status.indexOf('applied')>=0 ? 'badge-green' : 'badge-red'">{{ e.status }}</span>
+                <span class="text-xs text-gray-500">index={{ e.index }}</span>
+                <span v-if="e.op" class="badge badge-gray">{{ e.op }}</span>
+              </div>
+              <pre class="code" style="font-size:11px;max-height:150px;white-space:pre-wrap">{{ e.content_preview || e.content || '' }}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rollouts tab -->
+        <div v-if="stepDetailTab==='rollouts'" style="font-size:13px;max-height:55vh;overflow-y:auto" class="scroll-thin">
+          <div v-if="!stepDetail.rollouts || stepDetail.rollouts.length===0" style="color:#9ca3af;text-align:center;padding:24px">No rollout data found</div>
+          <div v-else>
+            <div class="flex gap-3 mb-4">
+              <div class="stat-card" style="flex:1"><div class="stat-num text-blue-600">{{ stepDetail.rollouts.length }}</div><div class="stat-label">Total Items</div></div>
+              <div class="stat-card" style="flex:1"><div class="stat-num text-green-600">{{ stepDetail.rollouts.filter(function(r){return r.hard===1}).length }}</div><div class="stat-label">Correct</div></div>
+              <div class="stat-card" style="flex:1"><div class="stat-num text-red-600">{{ stepDetail.rollouts.filter(function(r){return r.hard!==1}).length }}</div><div class="stat-label">Wrong</div></div>
+            </div>
+            <table>
+              <thead><tr><th>ID</th><th>Hard</th><th>Soft</th><th>Predicted</th><th>Question (truncated)</th></tr></thead>
+              <tbody>
+                <tr v-for="r in stepDetail.rollouts" :key="r.id" :style="r.hard===1 ? '' : 'background:#fef2f2'">
+                  <td style="font-family:monospace;font-size:11px">{{ (r.id||'').substring(0,12) }}</td>
+                  <td><span :class="r.hard===1 ? 'text-green-600' : 'text-red-600'">{{ r.hard===1 ? 'OK' : 'X' }}</span></td>
+                  <td>{{ (r.soft||0).toFixed(2) }}</td>
+                  <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">{{ r.predicted_answer || '' }}</td>
+                  <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;font-size:11px">{{ (r.question||'').substring(0,80) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Candidate Skill tab -->
+        <div v-if="stepDetailTab==='skill'" style="font-size:13px;max-height:55vh;overflow-y:auto" class="scroll-thin">
+          <div v-if="!stepDetail.candidate_skill" style="color:#9ca3af;text-align:center;padding:24px">No candidate skill found</div>
+          <pre v-else class="code" style="font-size:12px;white-space:pre-wrap">{{ stepDetail.candidate_skill }}</pre>
+        </div>
+
+        <!-- Raw JSON tab -->
+        <div v-if="stepDetailTab==='raw'" style="max-height:55vh;overflow-y:auto" class="scroll-thin">
+          <pre class="code" style="font-size:11px">{{ JSON.stringify(stepDetail, null, 2) }}</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="flex items-center" style="justify-content:space-between;margin-bottom:12px">
+        <h3 class="text-sm font-semibold">Skill Versions</h3>
+        <select v-model="selectedSkillVersion" @change="loadSkillContent" class="input" style="font-size:14px">
+          <option value="best">best_skill.md (best)</option>
+          <option v-for="s in runDetail.skills" :key="s.version" :value="s.version">v{{ s.version }}</option>
+        </select>
+      </div>
+      <pre v-if="skillContent" class="code" style="max-height:400px">{{ skillContent }}</pre>
+    </div>
+
+    <details class="card">
+      <summary>Run Config</summary>
+      <pre class="code">{{ JSON.stringify(runDetail.config, null, 2) }}</pre>
+    </details>
+  </div>
+
+  <div v-else-if="!selectedRun" style="text-align:center;color:#9ca3af;padding:48px 0">Select a training run to analyze</div>
+</div>
+
+</div>
+</div>
+
+<script>
+const { createApp, ref, onMounted, nextTick } = Vue;
+
+// Recursive tree node component for env file browsing
+const EnvTreeNode = {
+  name: 'EnvTreeNode',
+  props: ['node', 'selectedPath'],
+  emits: ['select'],
+  template: `
+    <div>
+      <div v-if="node.type === 'dir'" style="margin-bottom:2px">
+        <div style="font-weight:600;font-size:12px;color:#374151;padding:2px 4px">{{ node.name }}/</div>
+        <div style="margin-left:12px">
+          <env-tree-node v-for="child in node.children" :key="child.path" :node="child" :selected-path="selectedPath" @select="$emit('select', $event)"></env-tree-node>
+        </div>
+      </div>
+      <div v-else>
+        <div @click="$emit('select', node.path)" :style="'padding:3px 8px;font-size:12px;cursor:pointer;border-radius:4px;' + (selectedPath === node.path ? 'background:#dbeafe;color:#1e40af;font-weight:600' : 'color:#6b7280')">{{ node.name }}</div>
+      </div>
+    </div>
+  `,
+};
+
+const app = createApp({
+  setup() {
+    const activeTab = ref('train');
+    const tabs = [
+      { id: 'datasets', label: 'Datasets', icon: 'D' },
+      { id: 'config', label: 'Config', icon: 'C' },
+      { id: 'envs', label: 'Envs', icon: 'E' },
+      { id: 'train', label: 'Live Training', icon: '>' },
+      { id: 'analysis', label: 'Analysis', icon: '#' },
+    ];
+
+    const serverOnline = ref(false);
+
+    // Datasets
+    const datasets = ref([]);
+    const showUpload = ref(false);
+    const uploadName = ref('');
+    const uploadFile = ref(null);
+    const uploading = ref(false);
+    const previewData = ref(null);
+    const previewSplit = ref('train');
+
+    async function fetchDatasets() {
+      try {
+        const r = await fetch('/api/datasets');
+        const d = await r.json();
+        datasets.value = d.datasets || [];
+      } catch (e) { console.error(e); }
+    }
+
+    function onFileSelect(e) { uploadFile.value = e.target.files[0]; }
+
+    async function doUpload() {
+      if (!uploadFile.value) return;
+      uploading.value = true;
+      try {
+        const fd = new FormData();
+        fd.append('file', uploadFile.value);
+        fd.append('dataset_name', uploadName.value);
+        const r = await fetch('/api/datasets/upload', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d.status === 'ok') {
+          await fetchDatasets();
+          showUpload.value = false;
+          uploadName.value = '';
+          uploadFile.value = null;
+          alert('Dataset uploaded: ' + d.dataset);
+        }
+      } catch (e) { alert('Upload error: ' + e); }
+      finally { uploading.value = false; }
+    }
+
+    async function previewDataset(name) {
+      try {
+        const r = await fetch('/api/datasets/' + name + '/items?split=' + previewSplit.value + '&limit=10');
+        const d = await r.json();
+        previewData.value = Object.assign({ dataset: name }, d);
+      } catch (e) { console.error(e); }
+    }
+
+    // Config
+    const configs = ref([]);
+    const selectedConfigName = ref('');
+    const currentConfig = ref(null);
+    const configRawMode = ref(false);
+    const configRawText = ref('');
+    const savingConfig = ref(false);
+    const configSaved = ref(false);
+
+    async function fetchConfigs() {
+      try {
+        const r = await fetch('/api/configs');
+        const d = await r.json();
+        configs.value = d.configs || [];
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadConfig() {
+      if (!selectedConfigName.value) { currentConfig.value = null; return; }
+      try {
+        const r = await fetch('/api/configs/' + selectedConfigName.value);
+        currentConfig.value = await r.json();
+        configRawText.value = currentConfig.value.raw || '';
+      } catch (e) { console.error(e); }
+    }
+
+    function syncConfigRaw() {
+      // Rebuild raw text from parsed when form fields change
+      if (currentConfig.value && currentConfig.value.raw) {
+        // Keep raw text in sync - user can switch to raw mode to see
+      }
+    }
+
+    async function saveConfig() {
+      savingConfig.value = true;
+      try {
+        const raw = configRawMode.value ? configRawText.value : configRawText.value;
+        const r = await fetch('/api/configs/' + selectedConfigName.value, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ raw: raw }),
+        });
+        const d = await r.json();
+        if (d.status === 'ok') {
+          configSaved.value = true;
+          setTimeout(function() { configSaved.value = false; }, 2000);
+        }
+      } catch (e) { alert('Save error: ' + e); }
+      finally { savingConfig.value = false; }
+    }
+
+    // Train
+    const trainConfigPath = ref('');
+    const currentRunId = ref('');
+    const wsConnected = ref(false);
+    const logLines = ref([]);
+    const liveHistory = ref([]);
+    const liveStepDetail = ref(null);
+    const liveStepTab = ref('overview');
+    const liveRunName = ref('');
+    const logContainer = ref(null);
+    const liveScoreChart = ref(null);
+    const liveTokenChart = ref(null);
+    var ws = null;
+    var liveScoreChartObj = null;
+
+    async function startTraining() {
+      if (!trainConfigPath.value) return;
+      try {
+        const r = await fetch('/api/train/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config_path: trainConfigPath.value }),
+        });
+        const d = await r.json();
+        if (d.run_id) {
+          currentRunId.value = d.run_id;
+          logLines.value = [];
+          liveHistory.value = [];
+          wsConnected.value = true;
+          connectWS(d.run_id);
+        }
+      } catch (e) { alert('Error: ' + e); }
+    }
+
+    async function stopTraining() {
+      if (!currentRunId.value) return;
+      try { await fetch('/api/train/stop/' + currentRunId.value, { method: 'POST' }); }
+      catch (e) {}
+      if (ws) { ws.close(); ws = null; }
+      wsConnected.value = false;
+    }
+
+    function connectWS(runId) {
+      var proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(proto + '://' + location.host + '/ws/train/' + runId);
+      ws.onmessage = function(ev) {
+        var msg = JSON.parse(ev.data);
+        if (msg.type === 'log') {
+          logLines.value.push(msg.line);
+          if (logLines.value.length > 5000) logLines.value = logLines.value.slice(-3000);
+          parseLogLine(msg.line);
+          nextTick(function() {
+            if (logContainer.value) logContainer.value.scrollTop = logContainer.value.scrollHeight;
+          });
+        } else if (msg.type === 'end') {
+          logLines.value.push('[Training ended with code ' + msg.returncode + ']');
+          wsConnected.value = false;
+        } else if (msg.type === 'error') {
+          logLines.value.push('[ERROR] ' + msg.msg);
+          wsConnected.value = false;
+        }
+      };
+      ws.onclose = function() { wsConnected.value = false; };
+      ws.onerror = function() { wsConnected.value = false; };
+    }
+
+    function parseLogLine(line) {
+      var m = line.match(/Step\s+(\d+).*?hard=([\d.]+).*?soft=([\d.]+)/);
+      if (m) {
+        liveHistory.value.push({
+          step: parseInt(m[1]),
+          rollout_hard: parseFloat(m[2]),
+          rollout_soft: parseFloat(m[3]),
+          action: line.indexOf('accept') >= 0 ? 'accept_new_best' : (line.indexOf('reject') >= 0 ? 'reject_keep_current' : 'skip'),
+        });
+        updateLiveCharts();
+        if (!liveRunName.value) {
+          fetchLiveRunName();
+        }
+      }
+    }
+
+    async function fetchLiveRunName() {
+      try {
+        var r = await fetch('/api/runs/latest');
+        if (r.ok) {
+          var d = await r.json();
+          liveRunName.value = d.name;
+        }
+      } catch (e) {}
+    }
+
+    async function loadLiveStepDetail(step) {
+      liveStepTab.value = 'overview';
+      if (!liveRunName.value) {
+        await fetchLiveRunName();
+      }
+      if (!liveRunName.value) {
+        alert('Run directory not found yet. Training may still be initializing.');
+        return;
+      }
+      try {
+        var r = await fetch('/api/runs/' + liveRunName.value + '/step/' + step);
+        if (r.ok) {
+          liveStepDetail.value = await r.json();
+        } else {
+          liveStepDetail.value = { step: step, error: 'Step data not yet available' };
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function updateLiveCharts() {
+      if (!liveScoreChart.value || liveHistory.value.length === 0) return;
+      var labels = liveHistory.value.map(function(h) { return 'S' + h.step; });
+      var hardData = liveHistory.value.map(function(h) { return h.rollout_hard; });
+      var softData = liveHistory.value.map(function(h) { return h.rollout_soft; });
+
+      if (!liveScoreChartObj) {
+        liveScoreChartObj = new Chart(liveScoreChart.value, {
+          type: 'line',
+          data: { labels: labels, datasets: [
+            { label: 'Hard', data: hardData, borderColor: '#3b82f6', tension: 0.2 },
+            { label: 'Soft', data: softData, borderColor: '#10b981', tension: 0.2 },
+          ]},
+          options: { responsive: true, scales: { y: { beginAtZero: true, max: 1 } } }
+        });
+      } else {
+        liveScoreChartObj.data.labels = labels;
+        liveScoreChartObj.data.datasets[0].data = hardData;
+        liveScoreChartObj.data.datasets[1].data = softData;
+        liveScoreChartObj.update();
+      }
+    }
+
+    function logLineClass(line) {
+      if (/accept|PASS/i.test(line)) return 'log-accept';
+      if (/reject|FAIL|error|Error/i.test(line)) return 'log-reject';
+      if (/Step \d+/i.test(line)) return 'log-step';
+      if (/warn|Warning/i.test(line)) return 'log-warn';
+      if (/config|Setting|initial|loaded/i.test(line)) return 'log-info';
+      return 'log-dim';
+    }
+
+    // Analysis
+    const runs = ref([]);
+    const selectedRun = ref('');
+    const runDetail = ref(null);
+    const stepDetail = ref(null);
+    const stepDetailTab = ref('overview');
+    const stepTabs = [
+      { id: 'overview', label: 'Overview' },
+      { id: 'patches', label: 'Patches' },
+      { id: 'merged', label: 'Merged' },
+      { id: 'edits', label: 'Edits Applied' },
+      { id: 'rollouts', label: 'Rollouts' },
+      { id: 'skill', label: 'Candidate Skill' },
+      { id: 'raw', label: 'Raw JSON' },
+    ];
+    const selectedSkillVersion = ref('best');
+    const skillContent = ref('');
+    const runSummary = ref(null);
+    const gepaData = ref(null);
+    const proxData = ref(null);
+    const testEval = ref({});
+    const testCompareChart = ref(null);
+    const analysisScoreChart = ref(null);
+    const analysisTokenChart = ref(null);
+    const analysisTimingChart = ref(null);
+    const analysisActionChart = ref(null);
+
+    async function fetchRuns() {
+      try {
+        const r = await fetch('/api/runs');
+        const d = await r.json();
+        runs.value = d.runs || [];
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadRunDetail() {
+      if (!selectedRun.value) { runDetail.value = null; runSummary.value = null; gepaData.value = null; proxData.value = null; testEval.value = {}; return; }
+      try {
+        var r = await fetch('/api/runs/' + selectedRun.value);
+        runDetail.value = await r.json();
+        // Load all 4 phases
+        loadSummary();
+        loadGepa();
+        loadProx();
+        loadTestEval();
+        nextTick(function() {
+          renderAnalysisCharts();
+          nextTick(renderTestCompareChart);
+        });
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadSummary() {
+      try {
+        var r = await fetch('/api/runs/' + selectedRun.value + '/summary');
+        if (r.ok) runSummary.value = await r.json();
+        else runSummary.value = null;
+      } catch (e) { runSummary.value = null; }
+    }
+
+    async function loadGepa() {
+      try {
+        var r = await fetch('/api/runs/' + selectedRun.value + '/gepa');
+        if (r.ok) gepaData.value = await r.json();
+        else gepaData.value = null;
+      } catch (e) { gepaData.value = null; }
+    }
+
+    async function loadProx() {
+      try {
+        var r = await fetch('/api/runs/' + selectedRun.value + '/prox');
+        if (r.ok) proxData.value = await r.json();
+        else proxData.value = null;
+      } catch (e) { proxData.value = null; }
+    }
+
+    async function loadTestEval() {
+      try {
+        var r = await fetch('/api/runs/' + selectedRun.value + '/test');
+        if (r.ok) testEval.value = await r.json();
+        else testEval.value = {};
+        nextTick(renderTestCompareChart);
+      } catch (e) { testEval.value = {}; }
+    }
+
+    function phaseStatusStyle(phase, data) {
+      var active = false;
+      if (phase === 'phase1') active = true;
+      else if (phase === 'phase2') active = data && data.performed;
+      else if (phase === 'phase3') active = data && data.performed !== undefined;
+      else if (phase === 'phase4') active = data && Object.keys(data).length > 0;
+      var color = active ? '#e0f2fe' : '#f9fafb';
+      var border = active ? '#3b82f6' : '#e5e7eb';
+      return 'background:' + color + ';border:1px solid ' + border;
+    }
+
+    var testVariantsList = [
+      { key: 'baseline', label: 'S_0 (init)', badgeClass: 'badge-gray' },
+      { key: 'best', label: 'Best-on-val', badgeClass: 'badge-green' },
+      { key: 'final', label: 'Final/Last', badgeClass: 'badge-blue' },
+      { key: 'prox', label: 'Prox Shrunk', badgeClass: 'badge-orange' },
+    ];
+    var testVariants = testVariantsList;
+
+    function renderTestCompareChart() {
+      if (!testCompareChart.value) return;
+      var te = testEval.value;
+      var labels = [];
+      var data = [];
+      var colors = [];
+      var vlist = testVariantsList;
+      for (var i = 0; i < vlist.length; i++) {
+        var v = vlist[i];
+        if (te[v.key] && te[v.key].overall) {
+          labels.push(v.label);
+          data.push(te[v.key].overall.hard_acc * 100);
+          colors.push(v.key === 'baseline' ? '#9ca3af' : v.key === 'best' ? '#10b981' : v.key === 'final' ? '#3b82f6' : '#f59e0b');
+        }
+      }
+      if (labels.length === 0) return;
+      new Chart(testCompareChart.value, {
+        type: 'bar',
+        data: { labels: labels, datasets: [{ label: 'Hard Accuracy (%)', data: data, backgroundColor: colors }] },
+        options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
+      });
+    }
+
+    function renderAnalysisCharts() {
+      var hist = runDetail.value.history;
+      if (!hist || hist.length === 0) return;
+      var labels = hist.map(function(h) { return 'S' + h.step; });
+
+      // Score chart
+      if (analysisScoreChart.value) {
+        new Chart(analysisScoreChart.value, {
+          type: 'line',
+          data: { labels: labels, datasets: [
+            { label: 'Rollout Hard', data: hist.map(function(h) { return h.rollout_hard; }), borderColor: '#3b82f6', tension: 0.2 },
+            { label: 'Selection Hard', data: hist.map(function(h) { return h.selection_hard; }), borderColor: '#f59e0b', tension: 0.2 },
+            { label: 'Best Score', data: hist.map(function(h) { return h.best_score; }), borderColor: '#10b981', borderDash: [5,5], tension: 0.2 },
+          ]},
+          options: { responsive: true, scales: { y: { beginAtZero: true, max: 1 } } }
+        });
+      }
+
+      // Token chart
+      if (analysisTokenChart.value) {
+        new Chart(analysisTokenChart.value, {
+          type: 'bar',
+          data: { labels: labels, datasets: [
+            { label: 'Prompt', data: hist.map(function(h) { var p=0; for (var k in h.tokens||{}) p += h.tokens[k].prompt_tokens||0; return p; }), backgroundColor: 'rgba(59,130,246,0.6)' },
+            { label: 'Completion', data: hist.map(function(h) { var p=0; for (var k in h.tokens||{}) p += h.tokens[k].completion_tokens||0; return p; }), backgroundColor: 'rgba(249,115,22,0.6)' },
+          ]},
+          options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true } } }
+        });
+      }
+
+      // Timing chart
+      if (analysisTimingChart.value) {
+        new Chart(analysisTimingChart.value, {
+          type: 'bar',
+          data: { labels: labels, datasets: [
+            { label: 'Rollout', data: hist.map(function(h) { return (h.timing||{}).rollout_s || 0; }), backgroundColor: 'rgba(59,130,246,0.6)' },
+            { label: 'Reflect', data: hist.map(function(h) { return (h.timing||{}).reflect_s || 0; }), backgroundColor: 'rgba(168,85,247,0.6)' },
+            { label: 'Aggregate', data: hist.map(function(h) { return (h.timing||{}).aggregate_s || 0; }), backgroundColor: 'rgba(245,158,11,0.6)' },
+            { label: 'Gate', data: hist.map(function(h) { return (h.timing||{}).train_gate_s || 0; }), backgroundColor: 'rgba(220,38,38,0.6)' },
+            { label: 'Eval', data: hist.map(function(h) { return (h.timing||{}).evaluate_s || 0; }), backgroundColor: 'rgba(16,185,129,0.6)' },
+          ]},
+          options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true } } }
+        });
+      }
+
+      // Action chart
+      if (analysisActionChart.value) {
+        new Chart(analysisActionChart.value, {
+          type: 'bar',
+          data: { labels: labels, datasets: [
+            { label: 'Failure Patches', data: hist.map(function(h) { return h.n_failure_patches || 0; }), backgroundColor: 'rgba(220,38,38,0.6)' },
+            { label: 'Success Patches', data: hist.map(function(h) { return h.n_success_patches || 0; }), backgroundColor: 'rgba(16,185,129,0.6)' },
+            { label: 'Edits Merged', data: hist.map(function(h) { return h.n_edits_merged || 0; }), backgroundColor: 'rgba(59,130,246,0.6)' },
+          ]},
+          options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true } } }
+        });
+      }
+    }
+
+    async function loadStepDetail(step) {
+      try {
+        const r = await fetch('/api/runs/' + selectedRun.value + '/step/' + step);
+        stepDetail.value = await r.json();
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadSkillContent() {
+      try {
+        const r = await fetch('/api/runs/' + selectedRun.value + '/skill/' + selectedSkillVersion.value);
+        const d = await r.json();
+        skillContent.value = d.content;
+      } catch (e) { console.error(e); }
+    }
+
+    // Helpers
+    function runOptionLabel(r) {
+      var s = r.name;
+      if (r.num_steps !== undefined) s += ' (' + r.num_steps + ' steps)';
+      if (r.best_score !== undefined) s += ' best=' + r.best_score.toFixed(3);
+      return s;
+    }
+
+    function actionLabel(a) {
+      var map = {
+        'accept_new_best': 'Accept (new best)',
+        'reject_keep_current': 'Reject',
+        'skip': 'Skip',
+      };
+      return map[a] || a || '';
+    }
+
+    function actionColor(a) {
+      if (a === 'accept_new_best') return 'text-green-600 font-semibold';
+      if (a === 'reject_keep_current') return 'text-red-600';
+      return 'text-gray-500';
+    }
+
+    function totalTokens(history) {
+      var t = 0;
+      for (var i = 0; i < history.length; i++) {
+        var h = history[i];
+        for (var k in h.tokens || {}) {
+          t += (h.tokens[k].prompt_tokens || 0) + (h.tokens[k].completion_tokens || 0);
+        }
+      }
+      if (t > 1000000) return (t / 1000000).toFixed(1) + 'M';
+      if (t > 1000) return (t / 1000).toFixed(1) + 'K';
+      return String(t);
+    }
+
+    function stepTokens(h) {
+      var t = 0;
+      for (var k in h.tokens || {}) {
+        t += (h.tokens[k].prompt_tokens || 0) + (h.tokens[k].completion_tokens || 0);
+      }
+      return t;
+    }
+
+    // Envs
+    const envs = ref([]);
+    const selectedEnv = ref(null);
+    const selectedFilePath = ref('');
+    const envFileContent = ref('');
+    const savingEnvFile = ref(false);
+    const envFileSaved = ref(false);
+    const showCreateEnv = ref(false);
+    const newEnvName = ref('');
+    const creatingEnv = ref(false);
+
+    async function fetchEnvs() {
+      try {
+        const r = await fetch('/api/envs');
+        const d = await r.json();
+        envs.value = d.envs || [];
+      } catch (e) { console.error(e); }
+    }
+
+    async function browseEnv(name) {
+      try {
+        const r = await fetch('/api/envs/' + name);
+        selectedEnv.value = await r.json();
+        selectedFilePath.value = '';
+        envFileContent.value = '';
+      } catch (e) { console.error(e); }
+    }
+
+    async function selectEnvFile(path) {
+      selectedFilePath.value = path;
+      try {
+        const r = await fetch('/api/envs/' + selectedEnv.value.name + '/file?path=' + encodeURIComponent(path));
+        const d = await r.json();
+        envFileContent.value = d.content;
+      } catch (e) { console.error(e); }
+    }
+
+    async function saveEnvFile() {
+      if (!selectedFilePath.value || !selectedEnv.value) return;
+      savingEnvFile.value = true;
+      try {
+        const r = await fetch('/api/envs/' + selectedEnv.value.name + '/file?path=' + encodeURIComponent(selectedFilePath.value), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: envFileContent.value }),
+        });
+        const d = await r.json();
+        if (d.status === 'ok') {
+          envFileSaved.value = true;
+          setTimeout(function() { envFileSaved.value = false; }, 2000);
+        }
+      } catch (e) { alert('Save error: ' + e); }
+      finally { savingEnvFile.value = false; }
+    }
+
+    async function createEnv() {
+      if (!newEnvName.value) return;
+      creatingEnv.value = true;
+      try {
+        const r = await fetch('/api/envs/' + newEnvName.value + '/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        const d = await r.json();
+        if (d.status === 'ok') {
+          await fetchEnvs();
+          showCreateEnv.value = false;
+          newEnvName.value = '';
+          alert('Created env: ' + d.env + '\nClass: ' + d.class_name);
+        } else { alert('Create failed: ' + JSON.stringify(d)); }
+      } catch (e) { alert('Error: ' + e); }
+      finally { creatingEnv.value = false; }
+    }
+
+    async function deleteEnv(name) {
+      if (!confirm('Delete env "' + name + '"?\nThis will also remove config and unregister from scripts.')) return;
+      try {
+        const r = await fetch('/api/envs/' + name + '?delete_config=true&delete_data=false', { method: 'DELETE' });
+        const d = await r.json();
+        if (d.status === 'ok') {
+          selectedEnv.value = null;
+          await fetchEnvs();
+        }
+      } catch (e) { alert('Delete error: ' + e); }
+    }
+
+    async function registerEnv(name) {
+      try {
+        const r = await fetch('/api/envs/' + name + '/register', { method: 'POST' });
+        const d = await r.json();
+        if (d.status === 'ok') {
+          alert('Registered: ' + name + ' (' + d.class + ')');
+          await browseEnv(name);
+          await fetchEnvs();
+        }
+      } catch (e) { alert('Register error: ' + e); }
+    }
+
+    // Init
+    onMounted(async function() {
+      try {
+        await fetch('/api/datasets');
+        serverOnline.value = true;
+      } catch (e) { serverOnline.value = false; }
+      fetchDatasets();
+      fetchConfigs();
+      fetchRuns();
+      fetchEnvs();
+    });
+
+    return {
+      activeTab, tabs, serverOnline,
+      datasets, showUpload, uploadName, uploadFile, uploading, previewData, previewSplit,
+      fetchDatasets, onFileSelect, doUpload, previewDataset,
+      configs, selectedConfigName, currentConfig, configRawMode, configRawText, savingConfig, configSaved,
+      loadConfig, saveConfig, syncConfigRaw,
+      trainConfigPath, currentRunId, wsConnected, logLines, liveHistory,
+      logContainer, liveScoreChart, liveTokenChart, liveStepDetail, liveStepTab,
+      startTraining, stopTraining, loadLiveStepDetail, logLineClass,
+      runs, selectedRun, runDetail, stepDetail, stepDetailTab, stepTabs, selectedSkillVersion, skillContent,
+      runSummary, gepaData, proxData, testEval, testCompareChart, testVariants,
+      analysisScoreChart, analysisTokenChart, analysisTimingChart, analysisActionChart,
+      loadRunDetail, loadStepDetail, loadSkillContent, loadSummary, loadGepa, loadProx, loadTestEval,
+      phaseStatusStyle, renderTestCompareChart,
+      // envs
+      envs, selectedEnv, selectedFilePath, envFileContent, savingEnvFile, envFileSaved,
+      showCreateEnv, newEnvName, creatingEnv,
+      fetchEnvs, browseEnv, selectEnvFile, saveEnvFile, createEnv, deleteEnv, registerEnv,
+      // helpers
+      runOptionLabel, actionLabel, actionColor, totalTokens, stepTokens,
+    };
+  }
+});
+
+app.component('env-tree-node', EnvTreeNode);
+app.mount('#app');
+</script>
+</body>
+</html>
