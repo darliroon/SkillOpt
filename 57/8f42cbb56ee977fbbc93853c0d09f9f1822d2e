@@ -1,0 +1,142 @@
+skillopt/gepa_bridge.py
+  s_e563bca312678e::t_7823ebdd5668ae 79,81-105
+  s_e563bca312678e::t_d4c4bc8538630d 179-205
+  s_e563bca312678e::t_9d61c8fca648d1 26
+  s_e563bca312678e::t_a1d5abb1f69d55 206-256,258-269
+  s_e563bca312678e::t_396a5a17f4cc07 341-351
+  s_e563bca312678e::t_26c975326620d3 376
+  s_e563bca312678e::t_51bb11812cedbc 1-23,27-78,80,106-114,117,119-127,142-143,146-151,159-178,270-340,352-375,377-385,387-389,396-401,404-429
+  s_e563bca312678e::t_adfbfa94e40a37 116
+  s_e563bca312678e::t_e41d7a27aea679 24-25
+  s_e563bca312678e::t_6636a003d24eca 257
+  s_e563bca312678e::t_bf71f19c9a0f7f 386
+  s_e563bca312678e::t_e19d9c17690459 390-395,402-403
+  s_e563bca312678e::t_1049438bf0b0d0 115,118,128-141,144-145,152-158
+skillopt/engine/trainer.py
+  s_e563bca312678e::t_2ab3432ac2adde 2566-2597
+  s_e563bca312678e::t_5d714e13938608 2625-2626
+  s_e563bca312678e::t_0f66c2285c837a 898-910
+  s_e563bca312678e::t_b560fbf75b4ea1 928-932,944-946
+skillopt/evaluation/gate.py
+  s_e563bca312678e::t_20b2885be2e787 705-706,720-723
+  s_e563bca312678e::t_47f0bdcda48d5b 791-792
+  s_e563bca312678e::t_c6e105891b1fb2 771-775,777,779,781
+scripts/probe_latency.py
+  h_4d4cc0d7ef2df6 6
+configs/spreadsheetbench/gpt55_gepa.yaml
+  s_e563bca312678e::t_875955033eb624 1-43
+skillopt/model/openai_compatible_backend.py
+  s_e563bca312678e::t_761dceda843b90 209,211,218-219,222-223
+  s_e563bca312678e::t_4dd76801feb3b6 263,267
+  s_e563bca312678e::t_50dc792801c8e2 186-187,195-198,202-203
+  s_e563bca312678e::t_a7343e49d17d5e 108-110,113-114,117-118
+  s_e563bca312678e::t_3d77f72ee2b2a1 136-145,155-162,166,172,174,177,179,181,183
+skillopt/prompts/gepa_reflection.md
+  s_e563bca312678e::t_b1079c57910da3 1-11,13-23,31-40
+  s_e563bca312678e::t_f3fd16a242a9da 12,24-30
+skillopt/envs/spreadsheetbench/rollout.py
+  s_e563bca312678e::t_8c6020958cf223 477
+  s_e563bca312678e::t_968eebc4d9600f 872
+configs/spreadsheetbench/gepa_glm.yaml
+  s_e563bca312678e::t_6622d3ed8ceb19 1-39
+configs/_base_/default.yaml
+  s_e563bca312678e::t_5688dcf6c6118f 103-110
+  s_e563bca312678e::t_81496f88807b20 22
+  s_e563bca312678e::t_6fa63857d2651a 102
+configs/gpt-5.5.yaml
+  s_5951b4cbb16232::t_ad27d19177edca 1
+  s_28a70620555fd4::t_a0abe6cb0ce842 3
+  h_4d4cc0d7ef2df6 4
+skillopt/config.py
+  s_e563bca312678e::t_e9cb5cea5d972d 172-177
+  s_e563bca312678e::t_a2e2847310de48 166,168-171
+skillopt/envs/spreadsheetbench/adapter.py
+  s_e563bca312678e::t_5255b84062c05d 109-112,117-119,122-123
+.gitignore
+  h_4d4cc0d7ef2df6 74
+configs/searchqa/default.yaml
+  h_4d4cc0d7ef2df6 19
+  s_e563bca312678e::t_3203eb93a56d4c 5-6,20-21
+configs/spreadsheetbench/default.yaml
+  s_8b21ba4342eddb::t_7761900ddf8df1 5
+  h_4d4cc0d7ef2df6 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.2",
+  "base_commit_sha": "578f42cbb56ee977fbbc93853c0d09f9f1822d2e",
+  "prompts": {},
+  "humans": {
+    "h_4d4cc0d7ef2df6": {
+      "author": "lihaitao <1761864532@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_28a70620555fd4": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-ed98e1cd-ffea-4350-bf93-2b6497b55f1d",
+        "model": "default"
+      },
+      "human_author": "lihaitao <1761864532@qq.com>",
+      "custom_attributes": {
+        "source_scene": "cue",
+        "tool": "trae-cue",
+        "edit_kind": "file_edit",
+        "client_type": "ide",
+        "external_session_id": "icr-ed98e1cd-ffea-4350-bf93-2b6497b55f1d"
+      }
+    },
+    "s_5951b4cbb16232": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-1c0a4022-ac3b-48af-9b35-98bfa1156e3e",
+        "model": "default"
+      },
+      "human_author": "lihaitao <1761864532@qq.com>",
+      "custom_attributes": {
+        "source_scene": "cue",
+        "external_session_id": "icr-1c0a4022-ac3b-48af-9b35-98bfa1156e3e",
+        "edit_kind": "file_edit",
+        "tool": "trae-cue",
+        "client_type": "ide"
+      }
+    },
+    "s_8b21ba4342eddb": {
+      "agent_id": {
+        "tool": "trae-cue",
+        "id": "ai_tab-icr-9637a6e0-549b-46f1-b4e8-42712902bfdd",
+        "model": "default"
+      },
+      "human_author": "lihaitao <1761864532@qq.com>",
+      "custom_attributes": {
+        "client_type": "ide",
+        "external_session_id": "icr-9637a6e0-549b-46f1-b4e8-42712902bfdd",
+        "tool": "trae-cue",
+        "edit_kind": "file_edit",
+        "source_scene": "cue"
+      }
+    },
+    "s_e563bca312678e": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a8d36666d00dde861741b96",
+        "model": "GLM-5.2"
+      },
+      "human_author": "lihaitao <1761864532@qq.com>",
+      "custom_attributes": {
+        "tool_type": "builtin",
+        "operation_id": "6a91253b6d00dde861742a8b",
+        "tool_id": "icube:applyChatSnapshotPatch",
+        "external_session_id": "6a8d36666d00dde861741b96",
+        "session_id": "6a8d36666d00dde861741b96",
+        "tool_use_id": "6a91253b6d00dde861742a8b",
+        "dedupe_key": "6a8d36666d00dde861741b96:6a91253b6d00dde861742a8b:afterEdit:1074bb88",
+        "client_type": "ide",
+        "source_scene": "agent",
+        "edit_kind": "file_edit",
+        "runtime_client": "trae-tob-git-ai"
+      }
+    }
+  }
+}
