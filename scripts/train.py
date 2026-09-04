@@ -272,6 +272,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--skill_aware_appendix_source", type=str,
                    choices=["both", "failure_only"])
     p.add_argument("--skill_aware_consolidate_threshold", type=int)
+    p.add_argument("--use_wiki", type=_BOOL)
+    p.add_argument("--wiki_max_patterns", type=int)
+    p.add_argument("--wiki_sample_failures", type=int)
+    p.add_argument("--wiki_sample_successes", type=int)
+    p.add_argument("--wiki_max_completion_tokens", type=int)
+    p.add_argument("--wiki_max_traj_chars", type=int)
+    p.add_argument("--wiki_react_proposer", type=_BOOL)
+    p.add_argument("--wiki_react_max_iterations", type=int)
     p.add_argument("--data_path", type=str)
     p.add_argument("--split_mode", type=str,
                    choices=["ratio", "split_dir"])
@@ -464,6 +472,14 @@ _LEGACY_TO_STRUCTURED: dict[str, str] = {
     "use_skill_aware_reflection": "optimizer.use_skill_aware_reflection",
     "skill_aware_appendix_source": "optimizer.skill_aware_appendix_source",
     "skill_aware_consolidate_threshold": "optimizer.skill_aware_consolidate_threshold",
+    "use_wiki": "optimizer.use_wiki",
+    "wiki_max_patterns": "optimizer.wiki_max_patterns",
+    "wiki_sample_failures": "optimizer.wiki_sample_failures",
+    "wiki_sample_successes": "optimizer.wiki_sample_successes",
+    "wiki_max_completion_tokens": "optimizer.wiki_max_completion_tokens",
+    "wiki_max_traj_chars": "optimizer.wiki_max_traj_chars",
+    "wiki_react_proposer": "optimizer.wiki_react_proposer",
+    "wiki_react_max_iterations": "optimizer.wiki_react_max_iterations",
     "use_gate": "evaluation.use_gate",
     "sel_env_num": "evaluation.sel_env_num",
     "test_env_num": "evaluation.test_env_num",
@@ -800,6 +816,8 @@ def main() -> None:
     print(f"  minibatch_size: {cfg.get('minibatch_size')}")
     print(f"  seed:           {cfg.get('seed')}")
     print(f"  meta_skill:     {cfg.get('use_meta_skill', False)}")
+    print(f"  wiki:           {cfg.get('use_wiki', False)}"
+          f"  react_proposer: {cfg.get('wiki_react_proposer', False)}")
     print(f"  skill_aware_reflection: {cfg.get('use_skill_aware_reflection', False)}")
     print(f"  slow_update:    {cfg.get('use_slow_update', False)}")
     print(f"  out_root:       {cfg.get('out_root')}")

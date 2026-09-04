@@ -38,6 +38,15 @@ from skillopt.optimizer.lr_autonomous import decide_autonomous_learning_rate
 from skillopt.optimizer.prox_shrink import run_prox_shrink
 from skillopt.optimizer.rewrite import rewrite_skill_from_suggestions
 from skillopt.optimizer.scheduler import build_scheduler
+from skillopt.optimizer.wiki_maintainer import (
+    init_wiki,
+    run_wiki_maintainer,
+    format_wiki_context,
+    format_skill_impact_context,
+    update_skill_impact,
+    write_purpose_md,
+)
+from skillopt.optimizer.react_proposer import run_react_proposer
 from skillopt.optimizer.skill import apply_patch_with_report
 from skillopt.optimizer.appendix import (
     append_to_appendix_field,
@@ -893,6 +902,27 @@ class ReflACTTrainer:
             0.1, float(cfg.get("train_gate_tolerance_scale", 1.5))
         )
 
+        # ── WikiSkill: persistent knowledge base (wiki_stage) ───────────
+        use_wiki = bool(cfg.get("use_wiki", False))
+        wiki_max_patterns = max(5, int(cfg.get("wiki_max_patterns", 40)))
+        wiki_sample_failures = max(1, int(cfg.get("wiki_sample_failures", 10)))
+        wiki_sample_successes = max(0, int(cfg.get("wiki_sample_successes", 5)))
+        wiki_max_completion_tokens = int(
+            cfg.get("wiki_max_completion_tokens", optimizer_max_completion_tokens)
+        )
+        wiki_max_traj_chars = max(0, int(cfg.get("wiki_max_traj_chars", 15000)))
+        wiki_react_proposer = bool(cfg.get("wiki_react_proposer", False))
+        wiki_react_max_iterations = max(1, int(cfg.get("wiki_react_max_iterations", 8)))
+        if use_wiki:
+            init_wiki(out_root)
+            print(
+                f"  [config] wiki=ON max_patterns={wiki_max_patterns} "
+                f"sample_failures={wiki_sample_failures} "
+                f"sample_successes={wiki_sample_successes} "
+                f"react_proposer={wiki_react_proposer} "
+                f"max_traj_chars={wiki_max_traj_chars}"
+            )
+
         # ── SkillProx backward: post-training proximal shrink ───────────
         use_prox_shrink = bool(cfg.get("use_prox_shrink", False))
         # ── Phase 2: GEPA process-driven reflection ─────────────────────
@@ -1308,6 +1338,37 @@ class ReflACTTrainer:
                     all_rollout_results.extend(rollout_results)
                     print(f"    [1/6 done] hard={r_hard:.4f} soft={r_soft:.4f}")
 
+                    # ①.5 WIKI MAINTAINER ────────────────────────────────
+                    wiki_context = ""
+                    if use_wiki:
+                        t_phase = time.time()
+                        print(f"    [1.5 WIKI] updating knowledge base...")
+                        wiki_result = run_wiki_maintainer(
+                            rollout_results,
+                            out_root,
+                            step=global_step,
+                            epoch=epoch,
+                            n_failures=wiki_sample_failures,
+                            n_successes=wiki_sample_successes,
+                            max_patterns=wiki_max_patterns,
+                            max_completion_tokens=wiki_max_completion_tokens,
+                            max_traj_chars=wiki_max_traj_chars,
+                        )
+                        wiki_context = format_wiki_context(out_root)
+                        wiki_time = time.time() - t_phase
+                        step_rec.setdefault("timing", {})["wiki_s"] = round(wiki_time, 1)
+                        step_rec["wiki_patterns_written"] = (
+                            wiki_result.get("patterns_written", 0) if wiki_result else 0
+                        )
+                        step_rec["wiki_patterns_total"] = (
+                            wiki_result.get("patterns_total", 0) if wiki_result else 0
+                        )
+                        print(
+                            f"    [1.5 done] patterns_total="
+                            f"{step_rec['wiki_patterns_total']} "
+                            f"dt={wiki_time:.1f}s"
+                        )
+
                     # ② REFLECT ────────────────────────────────────────────
                     t_phase = time.time()
                     pred_dir = os.path.join(rollout_dir, "predictions")
@@ -1315,14 +1376,44 @@ class ReflACTTrainer:
                     # Build step context from buffer
                     step_buffer_context = _format_step_buffer(step_buffer)
 
-                    raw_patches = adapter.reflect(
-                        rollout_results, current_skill, batch_dir,
-                        prediction_dir=pred_dir, patches_dir=patches_dir,
-                        random_seed=batch_seed,
-                        step_buffer_context=step_buffer_context,
-                        meta_skill_context=active_meta_skill,
-                        max_completion_tokens=rewrite_max_completion_tokens,
-                    )
+                    if use_wiki and wiki_react_proposer:
+                        # ── ReAct-based Skill Proposer (论文 §3.2.3) ──────
+                        # Proposer 以 ReAct 方式按需 read_file 检索 wiki 和轨迹
+                        print(f"    [2 REACT] running ReAct Skill Proposer...")
+                        react_wiki_dir = os.path.join(out_root, "wiki")
+                        react_patch = run_react_proposer(
+                            rollout_results, current_skill,
+                            wiki_dir=react_wiki_dir,
+                            out_root=out_root,
+                            prediction_dir=pred_dir,
+                            step=global_step, epoch=epoch,
+                            max_iterations=wiki_react_max_iterations,
+                            max_traj_chars=wiki_max_traj_chars,
+                            max_completion_tokens=rewrite_max_completion_tokens,
+                        )
+                        raw_patches = [react_patch] if react_patch else []
+                        react_time = time.time() - t_phase
+                        step_rec.setdefault("timing", {})["react_s"] = round(react_time, 1)
+                        step_rec["wiki_react_iterations"] = wiki_react_max_iterations
+                        print(
+                            f"    [2 done] react_proposer patch={'yes' if react_patch else 'no'} "
+                            f"dt={react_time:.1f}s"
+                        )
+                    else:
+                        # ── Standard reflect (全量注入 wiki context) ──────
+                        # Inject skill-impact context from wiki (rejected edits history)
+                        if use_wiki:
+                            wiki_context += "\n\n" + format_skill_impact_context(out_root)
+
+                        raw_patches = adapter.reflect(
+                            rollout_results, current_skill, batch_dir,
+                            prediction_dir=pred_dir, patches_dir=patches_dir,
+                            random_seed=batch_seed,
+                            step_buffer_context=step_buffer_context,
+                            meta_skill_context=active_meta_skill,
+                            wiki_context=wiki_context,
+                            max_completion_tokens=rewrite_max_completion_tokens,
+                        )
                     failure_patches, success_patches = _normalise_patches(
                         raw_patches,
                         update_mode=update_mode,
@@ -2063,6 +2154,57 @@ class ReflACTTrainer:
 
                 step_buffer.append(buf_entry)
 
+                # ── Wiki skill-impact tracking ──────────────────────────
+                if use_wiki:
+                    impact_edits = None
+                    if ranked_patch and isinstance(ranked_patch, dict):
+                        impact_edits = get_payload_items(
+                            ranked_patch.get("patch", ranked_patch),
+                            update_mode,
+                        )
+                    update_skill_impact(
+                        out_root,
+                        step=global_step,
+                        epoch=epoch,
+                        action=action,
+                        score_before=prev_current,
+                        score_after=current_score,
+                        edits=impact_edits,
+                    )
+
+                    # ── Write PURPOSE.md (skill → wiki pattern traceability)
+                    purpose_pattern_refs = []
+                    if impact_edits:
+                        import re as _re
+                        for e in impact_edits:
+                            content = str(e.get("content", ""))
+                            refs = _re.findall(r"\[wiki:(\w+)\]", content)
+                            purpose_pattern_refs.extend(refs)
+                    # Also check raw_patches for wiki references
+                    if not purpose_pattern_refs and all_raw_patches:
+                        import re as _re
+                        for p in all_raw_patches:
+                            if not p or not isinstance(p, dict):
+                                continue
+                            patch_data = p.get("patch", p)
+                            edits_data = patch_data.get("edits", []) if isinstance(patch_data, dict) else []
+                            for e in edits_data:
+                                content = str(e.get("content", "")) if isinstance(e, dict) else str(e)
+                                refs = _re.findall(r"\[wiki:(\w+)\]", content)
+                                purpose_pattern_refs.extend(refs)
+                    purpose_pattern_refs = list(dict.fromkeys(purpose_pattern_refs))  # dedupe
+
+                    purpose_path = os.path.join(out_root, "skills")
+                    write_purpose_md(
+                        out_root,
+                        skill_path=purpose_path,
+                        step=global_step,
+                        epoch=epoch,
+                        pattern_refs=purpose_pattern_refs or None,
+                        action=action,
+                        edits_summary=f"{len(impact_edits or [])} edit(s), delta={current_score - prev_current:+.4f}",
+                    )
+
                 # Persist step digest for step buffer context
                 digest_path = os.path.join(step_dir, "trajectory_digest.json")
                 with open(digest_path, "w", encoding="utf-8") as f:
@@ -2108,12 +2250,14 @@ class ReflACTTrainer:
                     f"\n  [STEP {global_step} done] "
                     f"epoch={epoch} action={step_rec['action']} "
                     f"current={current_score:.4f} best={best_score:.4f} "
-                    f"dt={step_rec['wall_time_s']}s\n"
+                    + (f"wiki={step_rec.get('wiki_patterns_written',0)}/{step_rec.get('wiki_patterns_total',0)} " if use_wiki else "")
+                    + f"dt={step_rec['wall_time_s']}s\n"
                     f"    timing: rollout={timing.get('rollout_s',0)}s "
                     f"reflect={timing.get('reflect_s',0)}s "
                     f"aggregate={timing.get('aggregate_s',0)}s "
                     f"select={timing.get('select_s',0)}s "
                     f"evaluate={timing.get('evaluate_s',0)}s"
+                    + (f" wiki={timing.get('wiki_s',0)}s react={timing.get('react_s',0)}s" if use_wiki else "")
                 )
 
             epoch_last_step_skill = current_skill

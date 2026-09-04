@@ -732,6 +732,50 @@ async def get_run_summary(name: str):
     return json.loads(summary_file.read_text(encoding="utf-8"))
 
 
+@app.get("/api/runs/{name}/wiki")
+async def get_run_wiki(name: str):
+    """Get WikiSkill knowledge base: index, patterns, logs, skill-impact, PURPOSE."""
+    run_dir = OUTPUTS_DIR / name
+    wiki_dir = run_dir / "wiki"
+    if not wiki_dir.exists():
+        return {"exists": False}
+
+    def _read(p):
+        return p.read_text(encoding="utf-8") if p.exists() else ""
+
+    patterns = []
+    patterns_dir = wiki_dir / "patterns"
+    if patterns_dir.exists():
+        for f in sorted(patterns_dir.glob("pattern_*.md")):
+            content = _read(f)
+            # extract type/description from pattern file for quick display
+            ptype, desc = "", ""
+            for line in content.splitlines():
+                if line.startswith("**Type:**"):
+                    ptype = line.replace("**Type:**", "").strip()
+                elif line.startswith("**Description:**"):
+                    desc = line.replace("**Description:**", "").strip()
+                if ptype and desc:
+                    break
+            patterns.append({
+                "id": f.stem.replace("pattern_", ""),
+                "filename": f.name,
+                "type": ptype,
+                "description": desc,
+                "size": f.stat().st_size,
+                "content": content,
+            })
+
+    return {
+        "exists": True,
+        "index": _read(wiki_dir / "index.md"),
+        "patterns": patterns,
+        "logs": _read(wiki_dir / "logs.md"),
+        "skill_impact": _read(wiki_dir / "skill-impact.md"),
+        "purpose": _read(run_dir / "skills" / "PURPOSE.md"),
+    }
+
+
 @app.get("/api/runs/{name}/gepa")
 async def get_gepa_phase(name: str):
     """Get GEPA phase data: audit, iterations, candidates, pareto."""
@@ -1075,12 +1119,14 @@ async def get_run_timeline(name: str):
             "best_score": entry.get("best_score"),
             "current_score": entry.get("current_score"),
             "action": entry.get("action"),
+            "wiki_patterns_total": entry.get("wiki_patterns_total", 0),
+            "wiki_patterns_written": entry.get("wiki_patterns_written", 0),
         })
 
         tokens = entry.get("tokens", {})
         step_prompt = 0
         step_completion = 0
-        for phase in ("analyst", "merge", "rollout"):
+        for phase in ("analyst", "merge", "rollout", "wiki_maintainer", "react_proposer"):
             ph = tokens.get(phase, {})
             step_prompt += ph.get("prompt_tokens", 0)
             step_completion += ph.get("completion_tokens", 0)
@@ -1104,6 +1150,8 @@ async def get_run_timeline(name: str):
             "aggregate_s": timing.get("aggregate_s", 0),
             "gate_s": timing.get("train_gate_s", 0),
             "evaluate_s": timing.get("evaluate_s", 0),
+            "wiki_s": timing.get("wiki_s", 0),
+            "react_s": timing.get("react_s", 0),
             "wall_s": wall,
         })
 

@@ -1,0 +1,306 @@
+{
+  "wiki_off": {
+    "use_wiki": false,
+    "use_react": false,
+    "mode": "wiki_off",
+    "steps": [
+      {
+        "step": 0,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 0,
+        "wiki_patterns_total": 0,
+        "wiki_context_chars": 0,
+        "reflect_patches": 3,
+        "reflect_total_edits": 3,
+        "reflect_wiki_referenced_edits": 0,
+        "reflect_unique_patterns_referenced": 0,
+        "simulated_score_after": 0.3633,
+        "simulated_delta": 0.03
+      },
+      {
+        "step": 1,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 0,
+        "wiki_patterns_total": 0,
+        "wiki_context_chars": 0,
+        "reflect_patches": 3,
+        "reflect_total_edits": 3,
+        "reflect_wiki_referenced_edits": 0,
+        "reflect_unique_patterns_referenced": 0,
+        "simulated_score_after": 0.3633,
+        "simulated_delta": 0.03
+      },
+      {
+        "step": 2,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 0,
+        "wiki_patterns_total": 0,
+        "wiki_context_chars": 0,
+        "reflect_patches": 3,
+        "reflect_total_edits": 3,
+        "reflect_wiki_referenced_edits": 0,
+        "reflect_unique_patterns_referenced": 0,
+        "simulated_score_after": 0.3633,
+        "simulated_delta": 0.03
+      },
+      {
+        "step": 3,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 0,
+        "wiki_patterns_total": 0,
+        "wiki_context_chars": 0,
+        "reflect_patches": 3,
+        "reflect_total_edits": 3,
+        "reflect_wiki_referenced_edits": 0,
+        "reflect_unique_patterns_referenced": 0,
+        "simulated_score_after": 0.3633,
+        "simulated_delta": 0.03
+      },
+      {
+        "step": 4,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 0,
+        "wiki_patterns_total": 0,
+        "wiki_context_chars": 0,
+        "reflect_patches": 3,
+        "reflect_total_edits": 3,
+        "reflect_wiki_referenced_edits": 0,
+        "reflect_unique_patterns_referenced": 0,
+        "simulated_score_after": 0.3633,
+        "simulated_delta": 0.03
+      }
+    ],
+    "final_wiki_summary": {
+      "pattern_count": 0
+    },
+    "total_llm_calls": 15,
+    "llm_call_breakdown": {
+      "wiki_maintainer": 0,
+      "analyst": 15,
+      "react_proposer": 0
+    }
+  },
+  "wiki_on": {
+    "use_wiki": true,
+    "use_react": false,
+    "mode": "wiki_on",
+    "steps": [
+      {
+        "step": 0,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 2,
+        "wiki_patterns_total": 2,
+        "wiki_context_chars": 412,
+        "reflect_patches": 3,
+        "reflect_total_edits": 6,
+        "reflect_wiki_referenced_edits": 6,
+        "reflect_unique_patterns_referenced": 2,
+        "simulated_score_after": 0.5133,
+        "simulated_delta": 0.18
+      },
+      {
+        "step": 1,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 2,
+        "wiki_patterns_total": 3,
+        "wiki_context_chars": 492,
+        "reflect_patches": 3,
+        "reflect_total_edits": 9,
+        "reflect_wiki_referenced_edits": 9,
+        "reflect_unique_patterns_referenced": 3,
+        "simulated_score_after": 0.6033,
+        "simulated_delta": 0.27
+      },
+      {
+        "step": 2,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 1,
+        "wiki_patterns_total": 4,
+        "wiki_context_chars": 572,
+        "reflect_patches": 3,
+        "reflect_total_edits": 9,
+        "reflect_wiki_referenced_edits": 9,
+        "reflect_unique_patterns_referenced": 3,
+        "simulated_score_after": 0.6033,
+        "simulated_delta": 0.27
+      },
+      {
+        "step": 3,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 1,
+        "wiki_patterns_total": 5,
+        "wiki_context_chars": 642,
+        "reflect_patches": 3,
+        "reflect_total_edits": 9,
+        "reflect_wiki_referenced_edits": 9,
+        "reflect_unique_patterns_referenced": 3,
+        "simulated_score_after": 0.6033,
+        "simulated_delta": 0.27
+      },
+      {
+        "step": 4,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 0,
+        "wiki_patterns_total": 5,
+        "wiki_context_chars": 642,
+        "reflect_patches": 3,
+        "reflect_total_edits": 9,
+        "reflect_wiki_referenced_edits": 9,
+        "reflect_unique_patterns_referenced": 3,
+        "simulated_score_after": 0.6033,
+        "simulated_delta": 0.27
+      }
+    ],
+    "final_wiki_summary": {
+      "pattern_count": 5,
+      "pattern_ids": [
+        "answer_format",
+        "date_range",
+        "entity_linking",
+        "multi_hop",
+        "temporal_reasoning"
+      ],
+      "last_log_entry": "## Step 4 (Epoch 1)\n- Rollout results: 12\n- Failures sampled: 8\n- Successes sampled: 4\n- Patterns written: 0\n- Total patterns: 5\n- Key insights: Step 4: found 0 pattern(s)"
+    },
+    "total_llm_calls": 20,
+    "llm_call_breakdown": {
+      "wiki_maintainer": 5,
+      "analyst": 15,
+      "react_proposer": 0
+    }
+  },
+  "react": {
+    "use_wiki": true,
+    "use_react": true,
+    "mode": "react",
+    "steps": [
+      {
+        "step": 0,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 2,
+        "wiki_patterns_total": 2,
+        "wiki_context_chars": 412,
+        "reflect_patches": 1,
+        "reflect_total_edits": 2,
+        "reflect_wiki_referenced_edits": 2,
+        "reflect_unique_patterns_referenced": 2,
+        "simulated_score_after": 0.3933,
+        "simulated_delta": 0.06
+      },
+      {
+        "step": 1,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 2,
+        "wiki_patterns_total": 3,
+        "wiki_context_chars": 492,
+        "reflect_patches": 1,
+        "reflect_total_edits": 3,
+        "reflect_wiki_referenced_edits": 3,
+        "reflect_unique_patterns_referenced": 3,
+        "simulated_score_after": 0.4233,
+        "simulated_delta": 0.09
+      },
+      {
+        "step": 2,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 1,
+        "wiki_patterns_total": 4,
+        "wiki_context_chars": 572,
+        "reflect_patches": 1,
+        "reflect_total_edits": 3,
+        "reflect_wiki_referenced_edits": 3,
+        "reflect_unique_patterns_referenced": 3,
+        "simulated_score_after": 0.4233,
+        "simulated_delta": 0.09
+      },
+      {
+        "step": 3,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 1,
+        "wiki_patterns_total": 5,
+        "wiki_context_chars": 642,
+        "reflect_patches": 1,
+        "reflect_total_edits": 3,
+        "reflect_wiki_referenced_edits": 3,
+        "reflect_unique_patterns_referenced": 3,
+        "simulated_score_after": 0.4233,
+        "simulated_delta": 0.09
+      },
+      {
+        "step": 4,
+        "rollout_hard": 0.3333,
+        "rollout_soft": 0.3333,
+        "n_results": 12,
+        "n_failures": 8,
+        "wiki_patterns_written": 0,
+        "wiki_patterns_total": 5,
+        "wiki_context_chars": 642,
+        "reflect_patches": 1,
+        "reflect_total_edits": 3,
+        "reflect_wiki_referenced_edits": 3,
+        "reflect_unique_patterns_referenced": 3,
+        "simulated_score_after": 0.4233,
+        "simulated_delta": 0.09
+      }
+    ],
+    "final_wiki_summary": {
+      "pattern_count": 5,
+      "pattern_ids": [
+        "answer_format",
+        "date_range",
+        "entity_linking",
+        "multi_hop",
+        "temporal_reasoning"
+      ],
+      "last_log_entry": "## Step 4 (Epoch 1)\n- Rollout results: 12\n- Failures sampled: 8\n- Successes sampled: 4\n- Patterns written: 0\n- Total patterns: 5\n- Key insights: Step 4: found 0 pattern(s)"
+    },
+    "total_llm_calls": 15,
+    "llm_call_breakdown": {
+      "wiki_maintainer": 5,
+      "analyst": 0,
+      "react_proposer": 10
+    }
+  }
+}

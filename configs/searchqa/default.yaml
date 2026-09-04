@@ -2,10 +2,11 @@ _base_: ../_base_/default.yaml
 
 model:
   reasoning_effort: medium
-  optimizer: GLM-5.2
-  target: GLM-5.2
+  optimizer: gpt-5.6-sol
+  target: gpt-5.6-sol
 
 train:
+  num_epochs: 4
   train_size: 400
   batch_size: 40
   accumulation: 1

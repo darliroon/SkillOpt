@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>SkillOpt Wiki 模块数据流全景图</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #f0f2f5;
+    color: #1f2937;
+    padding: 24px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 { text-align: center; font-size: 26px; margin-bottom: 6px; }
+  .sub { text-align: center; color: #6b7280; margin-bottom: 20px; font-size: 13px; }
+
+  /* 图例 */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+    background: #fff; border-radius: 10px; padding: 12px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 28px;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+  .chip { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+  .c-read  { background: #dbeafe; border: 1px solid #3b82f6; }
+  .c-write { background: #dcfce7; border: 1px solid #22c55e; }
+  .c-llm   { background: #f3e8ff; border: 1px solid #a855f7; }
+  .c-mem   { background: #ffedd5; border: 1px solid #f97316; }
+  .c-wiki  { background: #fef9c3; border: 1px solid #eab308; }
+
+  /* 阶段卡片 */
+  .stage {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 6px;
+    border-left: 6px solid #94a3b8;
+  }
+  .stage.wiki   { border-left-color: #eab308; }
+  .stage.skill  { border-left-color: #22c55e; }
+  .stage.gate   { border-left-color: #ef4444; }
+  .stage.main   { border-left-color: #3b82f6; }
+  .stage-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .stage-no {
+    font-weight: 700; font-size: 15px; color: #fff;
+    background: #475569; border-radius: 6px; padding: 2px 10px;
+  }
+  .wiki  .stage-no { background: #ca8a04; }
+  .gate  .stage-no { background: #dc2626; }
+  .skill .stage-no { background: #16a34a; }
+  .main  .stage-no { background: #2563eb; }
+  .stage-name { font-size: 16px; font-weight: 700; }
+  .stage-code { font-size: 11px; color: #9ca3af; font-family: Consolas, monospace; }
+
+  .io-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+  .io-col { flex: 1; min-width: 240px; }
+  .io-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; margin-bottom: 6px; color: #6b7280; text-transform: uppercase; }
+  .box {
+    border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 8px;
+    font-family: Consolas, "Courier New", monospace;
+  }
+  .read  { background: #dbeafe; border: 1px solid #93c5fd; }
+  .write { background: #dcfce7; border: 1px solid #86efac; }
+  .llm   { background: #f3e8ff; border: 1px solid #d8b4fe; font-family: inherit; }
+  .mem   { background: #ffedd5; border: 1px solid #fdba74; }
+  .wikif { background: #fef9c3; border: 1px solid #fde047; }
+  .box b { font-family: inherit; }
+  .note { font-size: 12px; color: #6b7280; margin-top: 4px; }
+  .arrow-down {
+    text-align: center; font-size: 22px; color: #94a3b8; margin: 2px 0 6px;
+    user-select: none;
+  }
+  .arrow-down.g { color: #22c55e; }
+
+  /* 分支 */
+  .branch { display: flex; gap: 14px; flex-wrap: wrap; }
+  .branch-col { flex: 1; min-width: 320px; }
+  .branch-col .stage { margin-bottom: 0; }
+  .branch-tag {
+    text-align: center; font-size: 12px; font-weight: 700; margin-bottom: 6px;
+    color: #6b7280;
+  }
+  .split { text-align: center; margin: 8px 0; color: #94a3b8; font-size: 13px; }
+  .split::before, .split::after { content: "────"; margin: 0 10px; }
+
+  /* 表格 */
+  table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); font-size: 13px; }
+  th { background: #1e293b; color: #fff; padding: 10px 12px; text-align: left; }
+  td { padding: 9px 12px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td code { background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-size: 12px; font-family: Consolas, monospace; }
+  .section-title { font-size: 18px; font-weight: 700; margin: 36px 0 14px; padding-left: 10px; border-left: 5px solid #3b82f6; }
+
+  .footer-note { text-align: center; font-size: 12px; color: #9ca3af; margin-top: 30px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>SkillOpt × WikiSkill 模块数据流全景图</h1>
+  <div class="sub">基于 trainer.py 真实代码路径 · 黄色边框 = Wiki Layer（永不回滚） · 所有行号已核实</div>
+
+  <div class="legend">
+    <span><i class="chip c-read"></i>读取的文件</span>
+    <span><i class="chip c-write"></i>写入的文件</span>
+    <span><i class="chip c-llm"></i>LLM 调用</span>
+    <span><i class="chip c-mem"></i>内存数据</span>
+    <span><i class="chip c-wiki"></i>wiki/ 目录文件</span>
+  </div>
+
+  <!-- ══════════════ 主时间线 ══════════════ -->
+
+  <div class="stage main">
+    <div class="stage-head">
+      <span class="stage-no">阶段 0</span>
+      <span class="stage-name">初始化（训练开始前，仅一次）</span>
+    </div>
+    <div class="io-row">
+      <div class="io-col">
+        <div class="io-label">读取</div>
+        <div class="box read">config（use_wiki / wiki_max_patterns / wiki_sample_failures / wiki_sample_successes / wiki_max_traj_chars / wiki_max_completion_tokens / wiki_react_proposer / wiki_react_max_iterations）</div>
+      </div>
+      <div class="io-col">
+        <div class="io-label">写入</div>
+        <div class="box write">init_wiki(out_root) 创建：<br>wiki/patterns/ &nbsp; wiki/logs.md &nbsp; wiki/skill-impact.md</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <div class="stage">
+    <div class="stage-head">
+      <span class="stage-no">① ROLLOUT</span>
+      <span class="stage-name">Inference Agent 跑轨迹</span>
+      <span class="stage-code">trainer.py:1332</span>
+    </div>
+    <div class="io-row">
+      <div class="io-col">
+        <div class="io-label">读取 / 输入</div>
+        <div class="box mem">current_skill（内存，注入 system prompt）</div>
+        <div class="box read" style="border-style:dashed">★ 不注入任何 wiki 内容（论文要求：训练时禁止访问 Wiki）</div>
+      </div>
+      <div class="io-col">
+        <div class="io-label">写入</div>
+        <div class="box write">steps/step_XXXX/batch_a/rollout/predictions/{task_id}/conversation.json</div>
+        <div class="box mem">rollout_results（内存 list）→ 汇入 all_rollout_results</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down g">↓</div>
+
+  <div class="stage wiki">
+    <div class="stage-head">
+      <span class="stage-no">①.5 WIKI</span>
+      <span class="stage-name">Wiki Maintainer 知识沉淀（use_wiki=true 时执行）</span>
+      <span class="stage-code">trainer.py:1343-1370</span>
+    </div>
+    <div class="io-row">
+      <div class="io-col">
+        <div class="io-label">读取</div>
+        <div class="box mem">rollout_results（内存，采样：失败 wiki_sample_failures 条 / 成功 wiki_sample_successes 条，单条截断 wiki_max_traj_chars=15000 字符）</div>
+        <div class="box wikif">wiki/patterns/*.md —— 已有 pattern 列表（跨迭代积累）</div>
+      </div>
+      <div class="io-col">
+        <div class="io-label">LLM 调用</div>
+        <div class="box llm"><b>chat_optimizer</b>（stage: wiki_maintainer）<br>system = prompts/wiki_maintainer.md<br>user = 已有 pattern 索引 + 采样轨迹摘要<br>输出 = JSON: {"patterns": [{id, type, description, workaround, task_ids}], "summary"}</div>
+      </div>
+      <div class="io-col">
+        <div class="io-label">写入</div>
+        <div class="box wikif">wiki/patterns/pattern_{id}.md —— 新 ID=新增，同 ID=覆盖更新</div>
+        <div class="box wikif">wiki/logs.md —— 追加本步日志</div>
+        <div class="box wikif">wiki/index.md —— 整体重写（Failure/Success 分组目录）</div>
+        <div class="note">若 pattern 总数 &gt; wiki_max_patterns(40)：删除最旧的</div>
+      </div>
+    </div>
+    <div class="io-row" style="margin-top:6px">
+      <div class="io-col">
+        <div class="io-label">随后生成（内存）</div>
+        <div class="box mem">wiki_context = format_wiki_context() 读取全部 pattern 拼成索引文字<br><span class="note">仅标准模式使用；ReAct 模式不走此变量</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <div class="split">② SKILL PROPOSER 分叉：由 wiki_react_proposer 决定</div>
+
+  <div class="branch">
+    <!-- 分支 A -->
+    <div class="branch-col">
+      <div class="branch-tag">分支 A · 标准注入模式（wiki_react_proposer: false）</div>
+      <div class="stage">
+        <div class="stage-head">
+          <span class="stage-no">② A</span>
+          <span class="stage-name">Reflect 全量注入</span>
+          <span class="stage-code">trainer.py:1403-1415 · reflect.py:589/598</span>
+        </div>
+        <div class="io-row">
+          <div class="io-col">
+            <div class="io-label">读取</div>
+            <div class="box mem">wiki_context（pattern 索引）</div>
+            <div class="box wikif">wiki/skill-impact.md → format_skill_impact_context()（最近 5 条：避免重复提被拒编辑）</div>
+            <div class="box read">predictions/{task_id}/conversation.json（失败/成功轨迹）</div>
+            <div class="box read">trajectory_digest.json（step_buffer 上下文）</div>
+          </div>
+          <div class="io-col">
+            <div class="io-label">LLM + 写入</div>
+            <div class="box llm"><b>analyst LLM</b>（user prompt 中注入 Wiki Knowledge Base + Recent Skill Changes 段落）</div>
+            <div class="box write">patches/minibatch_fail_{idx}.json</div>
+            <div class="box write">patches/minibatch_succ_{idx}.json</div>
+            <div class="box mem">→ raw_patches（多个 minibatch patch）</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 分支 B -->
+    <div class="branch-col">
+      <div class="branch-tag">分支 B · ReAct 按需检索模式（wiki_react_proposer: true，论文 §3.2.3 原始设计）</div>
+      <div class="stage wiki">
+        <div class="stage-head">
+          <span class="stage-no">② B</span>
+          <span class="stage-name">ReAct Proposer 侦探式检索</span>
+          <span class="stage-code">trainer.py:1378-1398 · react_proposer.py</span>
+        </div>
+        <div class="io-row">
+          <div class="io-col">
+            <div class="io-label">初始 prompt 只含</div>
+            <div class="box wikif">wiki/index.md（pattern 目录：ID+摘要）</div>
+            <div class="box wikif">wiki/skill-impact.md（最近变更历史）</div>
+            <div class="box mem">iteration_summary（本轮失败列表+一句话原因，动态生成）</div>
+          </div>
+          <div class="io-col">
+            <div class="io-label">ReAct 循环（≤ wiki_react_max_iterations=8 轮）</div>
+            <div class="box llm"><b>Thought</b> → <b>Action</b>: read_file("…") → <b>Observation</b> → … → <b>Final Answer</b></div>
+            <div class="box read">read_file 按需读：<br>wiki/patterns/pattern_{id}.md（pattern 详情）<br>predictions/{task_id}/conversation.json（原始轨迹全文，截断 15000 字符）</div>
+            <div class="box mem">→ react_patch（单个 patch，<b>不落盘 patches/</b>）</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <div class="stage skill">
+    <div class="stage-head">
+      <span class="stage-no">③④⑤</span>
+      <span class="stage-name">Aggregate → Select → Update（全部内存操作）</span>
+    </div>
+    <div class="io-row">
+      <div class="io-col">
+        <div class="io-label">读取</div>
+        <div class="box mem">raw_patches / react_patch（内存）</div>
+        <div class="box mem">current_skill（内存）</div>
+      </div>
+      <div class="io-col">
+        <div class="io-label">产出</div>
+        <div class="box mem">candidate_skill = apply_patch(选中 edits，≤ edit_budget)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <div class="stage">
+    <div class="stage-head">
+      <span class="stage-no">⑤.5</span>
+      <span class="stage-name">Train Gate 前向闭环（use_train_gate=true 时）</span>
+      <span class="stage-code">trainer.py:1868</span>
+    </div>
+    <div class="io-row">
+      <div class="io-col">
+        <div class="io-label">读取</div>
+        <div class="box mem">candidate_skill → 注入 system prompt 重新执行</div>
+      </div>
+      <div class="io-col">
+        <div class="io-label">写入 / 产出</div>
+        <div class="box write">step_dir/train_gate/batch_a/ 验证轨迹</div>
+        <div class="box mem">tg_passed / tg_reason → 不通过则跳过本步（action=reject_train_gate）</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <div class="stage gate">
+    <div class="stage-head">
+      <span class="stage-no">⑥</span>
+      <span class="stage-name">Evaluate 验证集门控 + 回滚</span>
+      <span class="stage-code">trainer.py:2019</span>
+    </div>
+    <div class="io-row">
+      <div class="io-col">
+        <div class="io-label">读取</div>
+        <div class="box mem">candidate_skill</div>
+      </div>
+      <div class="io-col">
+        <div class="io-label">写入 / 决策</div>
+        <div class="box write">step_dir/selection_eval/ 验证轨迹</div>
+        <div class="box mem">分数提升 → <b>accept_new_best</b>（保留 candidate_skill）<br>否则 → <b>reject</b>（skill 回滚，<b style="color:#ca8a04">wiki 不动 ★ 核心特性</b>）</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down g">↓</div>
+
+  <div class="stage wiki">
+    <div class="stage-head">
+      <span class="stage-no">⑥.5</span>
+      <span class="stage-name">Wiki Skill-Impact 技能变更记录（use_wiki=true 时）</span>
+      <span class="stage-code">trainer.py:2156-2206</span>
+    </div>
+    <div class="io-row">
+      <div class="io-col">
+        <div class="io-label">读取（内存）</div>
+        <div class="box mem">action、score_before/score_after、edits</div>
+        <div class="box mem">正则提取 edits 中的 [wiki:xxx] → pattern_refs（技能→知识溯源）</div>
+      </div>
+      <div class="io-col">
+        <div class="io-label">写入</div>
+        <div class="box wikif">wiki/skill-impact.md —— 追加：Action + 分数变化 + edits diff</div>
+        <div class="box write">skills/PURPOSE.md —— 重写：本技能为哪些 pattern 而改（Motivating Wiki Patterns）</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <div class="stage skill">
+    <div class="stage-head">
+      <span class="stage-no">⑦</span>
+      <span class="stage-name">持久化（每步末尾）</span>
+      <span class="stage-code">trainer.py:2209-2245</span>
+    </div>
+    <div class="io-row">
+      <div class="io-col">
+        <div class="io-label">写入</div>
+        <div class="box write">skills/skill_v{step}.md —— 版本快照<br>best_skill.md —— 当前最优<br>history.json —— 全部 step_rec（含 wiki_patterns_written/total、timing.wiki_s、wiki_react_iterations）<br>runtime_state.json —— 断点续训<br>step_record.json —— 步记录</div>
+      </div>
+      <div class="io-col">
+        <div class="io-label">关键持久化</div>
+        <div class="box write">trajectory_digest.json —— 本步摘要</div>
+        <div class="box mem">→ 下一步 ② 的 step_buffer 上下文（相邻步记忆）</div>
+        <div class="box wikif" style="margin-top:4px">wiki/ 全部文件跨 step 保留 → 下一步 ①.5 / ② 继续读取（<b>跨迭代记忆</b>）</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ 闭环表 ══════════════ -->
+  <div class="section-title">五、5 个 Wiki 文件的读写闭环</div>
+  <table>
+    <tr><th style="width:190px">文件</th><th style="width:90px">写入时机</th><th style="width:150px">写入者</th><th>读取时机 → 读取者</th></tr>
+    <tr>
+      <td><code>wiki/patterns/pattern_{id}.md</code></td>
+      <td>①.5</td>
+      <td>run_wiki_maintainer</td>
+      <td>①.5（下一 step，读已有 pattern）→ run_wiki_maintainer<br>② 标准模式 → format_wiki_context → reflect prompt<br>② ReAct 模式 → read_file 按需读</td>
+    </tr>
+    <tr>
+      <td><code>wiki/index.md</code></td>
+      <td>①.5 末尾</td>
+      <td>_write_index_md</td>
+      <td>② ReAct 启动 prompt → run_react_proposer</td>
+    </tr>
+    <tr>
+      <td><code>wiki/logs.md</code></td>
+      <td>①.5</td>
+      <td>run_wiki_maintainer</td>
+      <td>调试 → get_wiki_summary</td>
+    </tr>
+    <tr>
+      <td><code>wiki/skill-impact.md</code></td>
+      <td>⑥.5</td>
+      <td>update_skill_impact</td>
+      <td>② 标准模式 → format_skill_impact_context（最近5条）→ reflect prompt<br>② ReAct 启动 prompt → run_react_proposer</td>
+    </tr>
+    <tr>
+      <td><code>skills/PURPOSE.md</code></td>
+      <td>⑥.5</td>
+      <td>write_purpose_md</td>
+      <td>人工追溯（暂无代码消费）</td>
+    </tr>
+  </table>
+
+  <!-- ══════════════ on/off 对比 ══════════════ -->
+  <div class="section-title">六、use_wiki 开 / 关差异清单</div>
+  <table>
+    <tr><th style="width:240px">项目</th><th style="width:32%">use_wiki: false</th><th>use_wiki: true</th></tr>
+    <tr><td>wiki/ 目录</td><td>不创建</td><td>创建并持续更新</td></tr>
+    <tr><td>①.5 阶段</td><td>跳过</td><td>LLM 调用 1 次/step（wiki_maintainer）</td></tr>
+    <tr><td>reflect prompt</td><td>无 Wiki / Impact 段落</td><td>标准模式注入 wiki_context + impact 历史；ReAct 模式按需检索</td></tr>
+    <tr><td>⑥.5 阶段</td><td>跳过</td><td>写 skill-impact.md + PURPOSE.md</td></tr>
+    <tr><td>step_record 字段</td><td>无 wiki_* 字段</td><td>wiki_patterns_written / wiki_patterns_total / timing.wiki_s / wiki_react_iterations</td></tr>
+    <tr><td>其余文件（patches / skill_v / history …）</td><td colspan="2" style="text-align:center;color:#6b7280">完全不变</td></tr>
+  </table>
+
+  <div class="footer-note">
+    配套文档: docs2/creation/WikiSkill.md · 关联代码: skillopt/optimizer/wiki_maintainer.py · skillopt/optimizer/react_proposer.py · skillopt/engine/trainer.py
+  </div>
+</div>
+</body>
+</html>

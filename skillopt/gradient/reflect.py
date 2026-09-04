@@ -275,6 +275,7 @@ def run_error_analyst_minibatch(
     trajectory_memory_context: str = "",
     step_buffer_context: str = "",
     meta_skill_context: str = "",
+    wiki_context: str = "",
     update_mode: str = "patch",
     skill_aware_reflection: bool = False,
     max_completion_tokens: int = 0,
@@ -347,6 +348,8 @@ def run_error_analyst_minibatch(
     optimizer_ctx = format_meta_skill_context(meta_skill_context)
     if optimizer_ctx:
         user += optimizer_ctx + "\n\n"
+    if wiki_context.strip():
+        user += wiki_context + "\n\n"
     user += f"## Failed Trajectories ({len(items)} total)\n{trajectories_text}"
 
     try:
@@ -392,6 +395,7 @@ def run_success_analyst_minibatch(
     trajectory_memory_context: str = "",
     step_buffer_context: str = "",
     meta_skill_context: str = "",
+    wiki_context: str = "",
     update_mode: str = "patch",
     skill_aware_reflection: bool = False,
     emit_appendix_notes: bool = True,
@@ -445,6 +449,8 @@ def run_success_analyst_minibatch(
     optimizer_ctx = format_meta_skill_context(meta_skill_context)
     if optimizer_ctx:
         user += optimizer_ctx + "\n\n"
+    if wiki_context.strip():
+        user += wiki_context + "\n\n"
     user += f"## Successful Trajectories ({len(items)} total)\n{trajectories_text}"
 
     try:
@@ -506,6 +512,7 @@ def run_minibatch_reflect(
     trajectory_memory_context: str = "",
     step_buffer_context: str = "",
     meta_skill_context: str = "",
+    wiki_context: str = "",
     update_mode: str = "patch",
     skill_aware_reflection: bool | None = None,
     skill_aware_appendix_source: str | None = None,
@@ -606,6 +613,7 @@ def run_minibatch_reflect(
             rejection_context=rejection_context,
             trajectory_memory_context=trajectory_memory_context,
             meta_skill_context=meta_skill_context,
+            wiki_context=wiki_context,
             update_mode=update_mode,
             skill_aware_reflection=skill_aware_reflection,
             max_completion_tokens=max_completion_tokens,
@@ -620,6 +628,7 @@ def run_minibatch_reflect(
             step_buffer_context=step_buffer_context,
             trajectory_memory_context=trajectory_memory_context,
             meta_skill_context=meta_skill_context,
+            wiki_context=wiki_context,
             update_mode=update_mode,
             skill_aware_reflection=skill_aware_reflection,
             emit_appendix_notes=(skill_aware_appendix_source != "failure_only"),

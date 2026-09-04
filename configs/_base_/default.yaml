@@ -7,23 +7,23 @@ model:
   optimizer_backend: openai_compatible
   target_backend: openai_compatible
 
-  # openai_compatible_base_url: "https://yibuapi.com/v1/"
-  # openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
-  openai_compatible_base_url: "http://113.46.219.251:8080/v1"
-  openai_compatible_api_key: "sk-ICnSVVK7fRlxOCPa411PnQ,sk-6Vi_7BS_IuofzkYt8t2B9w,sk-aKvB_bgo8FfKyykyFaW8DQ,sk-UMg-HjVgC6JHbycwDnvycQ"
+  openai_compatible_base_url: "https://yibuapi.com/v1/"
+  openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
+  # openai_compatible_base_url: "http://113.46.219.251:8080/v1"
+  # openai_compatible_api_key: "sk-ICnSVVK7fRlxOCPa411PnQ,sk-6Vi_7BS_IuofzkYt8t2B9w,sk-aKvB_bgo8FfKyykyFaW8DQ,sk-UMg-HjVgC6JHbycwDnvycQ"
 
   optimizer: ""
-  # optimizer_openai_compatible_base_url: "https://yibuapi.com/v1/"
-  # optimizer_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
-  optimizer_openai_compatible_base_url: "http://113.46.219.251:8080/v1"
-  optimizer_openai_compatible_api_key: "sk-ICnSVVK7fRlxOCPa411PnQ,sk-6Vi_7BS_IuofzkYt8t2B9w,sk-aKvB_bgo8FfKyykyFaW8DQ,sk-UMg-HjVgC6JHbycwDnvycQ"
+  optimizer_openai_compatible_base_url: "https://yibuapi.com/v1/"
+  optimizer_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
+  # optimizer_openai_compatible_base_url: "http://113.46.219.251:8080/v1"
+  # optimizer_openai_compatible_api_key: "sk-ICnSVVK7fRlxOCPa411PnQ,sk-6Vi_7BS_IuofzkYt8t2B9w,sk-aKvB_bgo8FfKyykyFaW8DQ,sk-UMg-HjVgC6JHbycwDnvycQ"
 
   target: ""
   # target: GLM-5.2,GLM-5.1  ← comma-separated: each key gets its own model deployment
-  # target_openai_compatible_base_url: "https://yibuapi.com/v1/"
-  # target_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
-  target_openai_compatible_base_url: "http://113.46.219.251:8080/v1"
-  target_openai_compatible_api_key: "sk-ICnSVVK7fRlxOCPa411PnQ,sk-6Vi_7BS_IuofzkYt8t2B9w,sk-aKvB_bgo8FfKyykyFaW8DQ,sk-UMg-HjVgC6JHbycwDnvycQ"
+  target_openai_compatible_base_url: "https://yibuapi.com/v1/"
+  target_openai_compatible_api_key: "sk-or4MGHJM8xbWKIilBP9Ube3S3s7D6guVBZQwyqI6fXnoZUex,sk-lIrl5wFYbH36sV23pwnd6lqWcC2xXEgfPWQoqFCzYH2OIgXU,sk-p7FxYTorCAJpl8F4haJ9ERMzCyxPNdlTWGRNCGu3ASCY2Lu8"
+  # target_openai_compatible_base_url: "http://113.46.219.251:8080/v1"
+  # target_openai_compatible_api_key: "sk-ICnSVVK7fRlxOCPa411PnQ,sk-6Vi_7BS_IuofzkYt8t2B9w,sk-aKvB_bgo8FfKyykyFaW8DQ,sk-UMg-HjVgC6JHbycwDnvycQ"
 
   # 在 azure_openai.py#L380-L412 中真正生效:作为 reasoning = {"effort": ...} (Responses API)或 
   # reasoning_effort =...(Chat API)传给 API,控制 optimizer/target 所有 LLM 调用的思考量
@@ -75,6 +75,20 @@ optimizer:
   skill_aware_appendix_source: both  # both = success+failure emit appendix notes; failure_only = only EXECUTION_LAPSE (paper-faithful)
   skill_aware_consolidate_threshold: 0  # 0 = off; >0 = LLM-consolidate the appendix when its note count exceeds N
 
+  # ── WikiSkill: persistent knowledge base (wiki_stage) ──────────────
+  # 在 Rollout 和 Reflect 之间插入 Wiki Maintainer, 将轨迹沉淀为持久知识库;
+  # wiki 跨所有迭代积累, skill 回滚时 wiki 保留; reflect 时注入 wiki 索引
+  use_wiki: true
+  wiki_max_patterns: 40           # pattern 数量上限, 超出时删除最旧的
+  wiki_sample_failures: 10        # Wiki Maintainer 每次采样的失败轨迹数
+  wiki_sample_successes: 5         # Wiki Maintainer 每次采样的成功轨迹数
+  wiki_max_completion_tokens: 32000  # Wiki Maintainer LLM 调用的 max_completion_tokens
+  wiki_max_traj_chars: 15000      # 单条轨迹最大字符数 (论文: 15000), 0 = 不截断
+  # ReAct Skill Proposer (论文 §3.2.3): Proposer 以 ReAct 方式按需 read_file
+  # 检索 wiki pattern 和原始轨迹, 而非全量注入; 需 use_wiki: true
+  wiki_react_proposer: true      # true = 用 ReAct Proposer 替代标准 reflect
+  wiki_react_max_iterations: 8   # ReAct 循环最大轮数 (即最多 read_file 8 次)
+
   # ── SkillProx-style forward closed-loop gate (trainer.py ⑤.5) ──────
   # 在同一训练批上重执行候选 skill,通过后才进入 selection 评估;未通过则回滚并重试
   use_train_gate: false
@@ -87,7 +101,7 @@ optimizer:
   # ── SkillProx backward: 训练后近端收缩 (prox_shrink.py) ────────────
   # 对 best_skill 做 单元分解 → leave-one-out 效用审计 → Shrinker 收缩 → 三重门控;
   # 任一轮失败即终止(单遍有限终止); 通过则更新 best_skill 并影响最终 test 评估
-  use_prox_shrink: true
+  use_prox_shrink: false
   prox_max_trials: 3            # 最大收缩轮数
   prox_max_compression: 0.10    # 累计压缩率软上限; 超限时需至少一项指标严格优于基线才放行(证据豁免)
   prox_hard_tolerance: -1       # hard 验证地板容忍; 负数 = 自动(= scale × σ噪声, 随数据集/val规模自适应); 正数 = 固定值

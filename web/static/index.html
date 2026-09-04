@@ -501,12 +501,40 @@
         <div class="card"><h3 class="text-sm font-semibold mb-4">Patches & Edits</h3><canvas ref="analysisActionChart" height="180"></canvas></div>
       </div>
 
+      <!-- Wiki Knowledge Base Panel -->
+      <div v-if="wikiData && wikiData.exists" class="card" style="margin-top:12px;border-left:4px solid #ea580c">
+        <div class="flex items-center gap-3 mb-4" style="justify-content:space-between">
+          <h3 class="text-sm font-semibold" style="color:#c2410c">Wiki Knowledge Base (persistent, never rolled back)</h3>
+          <div class="flex gap-2">
+            <button v-for="t in wikiTabs" :key="t.id" @click="wikiTab=t.id"
+              :style="'border:none;padding:4px 10px;font-size:12px;cursor:pointer;border-radius:4px;font-weight:' + (wikiTab===t.id ? 'bold' : 'normal') + ';background:' + (wikiTab===t.id ? '#ffedd5' : '#f3f4f6') + ';color:' + (wikiTab===t.id ? '#9a3412' : '#6b7280')">{{ t.label }}<span v-if="t.id==='patterns'"> ({{ wikiData.patterns.length }})</span></button>
+          </div>
+        </div>
+
+        <div v-if="wikiTab==='patterns'">
+          <div v-if="!wikiData.patterns.length" style="color:#9ca3af;text-align:center;padding:24px">No patterns</div>
+          <div v-for="p in wikiData.patterns" :key="p.id" class="card" style="margin-bottom:8px;padding:10px;cursor:pointer" @click="selectedWikiPattern = (selectedWikiPattern===p.id ? null : p.id)">
+            <div class="flex items-center gap-2">
+              <span class="badge" :class="p.type==='success' ? 'badge-green' : 'badge-red'">{{ p.type || 'unknown' }}</span>
+              <b style="font-size:13px">{{ p.id }}</b>
+              <span class="text-xs text-gray-400">{{ p.size }} B</span>
+            </div>
+            <div class="text-xs text-gray-500" style="margin-top:4px">{{ p.description }}</div>
+            <div v-if="selectedWikiPattern===p.id" class="pre code" style="margin-top:8px">{{ p.content }}</div>
+          </div>
+        </div>
+        <div v-else-if="wikiTab==='index'"><pre class="code">{{ wikiData.index || '(empty)' }}</pre></div>
+        <div v-else-if="wikiTab==='impact'"><pre class="code" style="max-height:400px;overflow:auto">{{ wikiData.skill_impact || '(empty)' }}</pre></div>
+        <div v-else-if="wikiTab==='logs'"><pre class="code" style="max-height:400px;overflow:auto">{{ wikiData.logs || '(empty)' }}</pre></div>
+        <div v-else-if="wikiTab==='purpose'"><pre class="code">{{ wikiData.purpose || '(not written)' }}</pre></div>
+      </div>
+
       <div class="card" style="margin-top:12px">
         <h3 class="text-sm font-semibold mb-4">Step Details (click row for reflection detail)</h3>
         <div style="overflow-x:auto" class="scroll-thin">
           <table>
             <thead><tr>
-              <th>Step</th><th>Epoch</th><th>Rollout</th><th>Selection</th><th>Patches</th><th>Gate</th><th>Action</th><th>Wall(s)</th><th>Tokens</th>
+              <th>Step</th><th>Epoch</th><th>Rollout</th><th>Selection</th><th>Patches</th><th>Wiki</th><th>Gate</th><th>Action</th><th>Wall(s)</th><th>Tokens</th>
             </tr></thead>
             <tbody>
               <tr v-for="h in runDetail.history" :key="h.step" @click="loadStepDetail(h.step)" :style="h.action==='accept_new_best' ? 'background:#f0fdf4;cursor:pointer' : 'cursor:pointer'">
@@ -515,6 +543,10 @@
                 <td>{{ (h.rollout_hard||0).toFixed(3) }}</td>
                 <td>{{ (h.selection_hard||0).toFixed(3) }}</td>
                 <td>{{ h.n_patches || 0 }} ({{ h.n_failure_patches||0 }}F/{{ h.n_success_patches||0 }}S)</td>
+                <td>
+                  <span v-if="h.wiki_patterns_total" class="badge badge-orange" :title="'written this step: ' + (h.wiki_patterns_written||0)">{{ h.wiki_patterns_total }} pat</span>
+                  <span v-else class="text-gray-400">-</span>
+                </td>
                 <td>
                   <span v-if="h.train_gate && h.train_gate.enabled" :class="h.train_gate.attempts[0].passed ? 'text-green-600' : 'text-red-600'">{{ h.train_gate.attempts[0].passed ? 'PASS' : 'FAIL' }}</span>
                   <span v-else class="text-gray-400">-</span>
@@ -699,6 +731,7 @@
           <div style="background:#f3f4f6;border-radius:6px;padding:8px"><b>Rollout:</b> hard={{ (stepDetail.rollout_hard||0).toFixed(3) }} soft={{ (stepDetail.rollout_soft||0).toFixed(3) }}</div>
           <div style="background:#f3f4f6;border-radius:6px;padding:8px"><b>Selection:</b> hard={{ (stepDetail.selection_hard||0).toFixed(3) }}</div>
           <div style="background:#f3f4f6;border-radius:6px;padding:8px"><b>Action:</b> <span :class="actionColor(stepDetail.action)">{{ actionLabel(stepDetail.action) }}</span></div>
+          <div v-if="stepDetail.wiki_patterns_total" style="background:#fff7ed;border-radius:6px;padding:8px"><b>Wiki:</b> {{ stepDetail.wiki_patterns_written || 0 }} written / {{ stepDetail.wiki_patterns_total }} total patterns<span v-if="stepDetail.timing && stepDetail.timing.wiki_s"> | maintainer {{ stepDetail.timing.wiki_s.toFixed(1) }}s</span><span v-if="stepDetail.timing && stepDetail.timing.react_s"> | ReAct {{ stepDetail.timing.react_s.toFixed(1) }}s</span></div>
           <div style="background:#f3f4f6;border-radius:6px;padding:8px"><b>Wall:</b> {{ (stepDetail.wall_time_s||0).toFixed(1) }}s</div>
         </div>
 
@@ -1186,6 +1219,16 @@ const app = createApp({
     const gepaData = ref(null);
     const proxData = ref(null);
     const testEval = ref({});
+    const wikiData = ref(null);
+    const wikiTab = ref('patterns');
+    const selectedWikiPattern = ref(null);
+    const wikiTabs = [
+      { id: 'patterns', label: 'Patterns' },
+      { id: 'index', label: 'Index' },
+      { id: 'impact', label: 'Skill Impact' },
+      { id: 'logs', label: 'Logs' },
+      { id: 'purpose', label: 'Purpose' },
+    ];
     const testCompareChart = ref(null);
     const analysisScoreChart = ref(null);
     const analysisTokenChart = ref(null);
@@ -1201,7 +1244,7 @@ const app = createApp({
     }
 
     async function loadRunDetail() {
-      if (!selectedRun.value) { runDetail.value = null; runSummary.value = null; gepaData.value = null; proxData.value = null; testEval.value = {}; return; }
+      if (!selectedRun.value) { runDetail.value = null; runSummary.value = null; gepaData.value = null; proxData.value = null; testEval.value = {}; wikiData.value = null; return; }
       try {
         var r = await fetch('/api/runs/' + selectedRun.value);
         runDetail.value = await r.json();
@@ -1210,6 +1253,7 @@ const app = createApp({
         loadGepa();
         loadProx();
         loadTestEval();
+        loadWiki();
         nextTick(function() {
           renderAnalysisCharts();
           nextTick(renderTestCompareChart);
@@ -1223,6 +1267,14 @@ const app = createApp({
         if (r.ok) runSummary.value = await r.json();
         else runSummary.value = null;
       } catch (e) { runSummary.value = null; }
+    }
+
+    async function loadWiki() {
+      try {
+        var r = await fetch('/api/runs/' + selectedRun.value + '/wiki');
+        if (r.ok) wikiData.value = await r.json();
+        else wikiData.value = null;
+      } catch (e) { wikiData.value = null; }
     }
 
     async function loadGepa() {
@@ -1305,8 +1357,12 @@ const app = createApp({
             { label: 'Rollout Hard', data: hist.map(function(h) { return h.rollout_hard; }), borderColor: '#3b82f6', tension: 0.2 },
             { label: 'Selection Hard', data: hist.map(function(h) { return h.selection_hard; }), borderColor: '#f59e0b', tension: 0.2 },
             { label: 'Best Score', data: hist.map(function(h) { return h.best_score; }), borderColor: '#10b981', borderDash: [5,5], tension: 0.2 },
+            { label: 'Wiki Patterns', data: hist.map(function(h) { return h.wiki_patterns_total || 0; }), borderColor: '#ea580c', yAxisID: 'y1', stepped: true, pointRadius: 3 },
           ]},
-          options: { responsive: true, scales: { y: { beginAtZero: true, max: 1 } } }
+          options: { responsive: true, scales: {
+            y: { beginAtZero: true, max: 1 },
+            y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'patterns' } },
+          } }
         });
       }
 
@@ -1332,6 +1388,8 @@ const app = createApp({
             { label: 'Aggregate', data: hist.map(function(h) { return (h.timing||{}).aggregate_s || 0; }), backgroundColor: 'rgba(245,158,11,0.6)' },
             { label: 'Gate', data: hist.map(function(h) { return (h.timing||{}).train_gate_s || 0; }), backgroundColor: 'rgba(220,38,38,0.6)' },
             { label: 'Eval', data: hist.map(function(h) { return (h.timing||{}).evaluate_s || 0; }), backgroundColor: 'rgba(16,185,129,0.6)' },
+            { label: 'Wiki Maintainer', data: hist.map(function(h) { return (h.timing||{}).wiki_s || 0; }), backgroundColor: 'rgba(234,88,12,0.6)' },
+            { label: 'ReAct Proposer', data: hist.map(function(h) { return (h.timing||{}).react_s || 0; }), backgroundColor: 'rgba(251,146,60,0.6)' },
           ]},
           options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true } } }
         });
@@ -1532,6 +1590,7 @@ const app = createApp({
       startTraining, stopTraining, loadLiveStepDetail, logLineClass,
       runs, selectedRun, runDetail, stepDetail, stepDetailTab, stepTabs, selectedSkillVersion, skillContent,
       runSummary, gepaData, proxData, testEval, testCompareChart, testVariants,
+      wikiData, wikiTab, wikiTabs, selectedWikiPattern,
       analysisScoreChart, analysisTokenChart, analysisTimingChart, analysisActionChart,
       loadRunDetail, loadStepDetail, loadSkillContent, loadSummary, loadGepa, loadProx, loadTestEval,
       phaseStatusStyle, renderTestCompareChart,

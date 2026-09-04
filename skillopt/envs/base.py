@@ -268,6 +268,7 @@ class EnvAdapter(ABC):
             success_system=self.get_success_minibatch_prompt(),
             step_buffer_context=kwargs.get("step_buffer_context", ""),
             meta_skill_context=kwargs.get("meta_skill_context", ""),
+            wiki_context=kwargs.get("wiki_context", ""),
             update_mode=getattr(self, "_cfg", {}).get("skill_update_mode", "patch"),
             max_completion_tokens=kwargs.get(
                 "max_completion_tokens",
