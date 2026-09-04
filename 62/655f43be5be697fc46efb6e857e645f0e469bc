@@ -1,0 +1,126 @@
+scripts/train.py
+  s_a4dbdee90224d0::t_8892a0241857d1 275-282
+  s_a4dbdee90224d0::t_5a03d61ecdc22a 819-820
+  s_a4dbdee90224d0::t_bac388748e4fd9 475-482
+configs/_base_/default.yaml
+  s_a4dbdee90224d0::t_9d13cf286c800e 86-88,90
+  h_4d4cc0d7ef2df6 12-13,18-19,25-26,81,89,91,104
+  s_a4dbdee90224d0::t_92802a63ce6777 10-11,16-17,23-24,78-80,82-85
+docs2/creation/wikiskill_feasibility.md
+  s_a4dbdee90224d0::t_378eb5805e433c 1-387
+skillopt/engine/trainer.py
+  s_a4dbdee90224d0::t_94a3d122411d6f 2253-2254,2260
+  s_a4dbdee90224d0::t_61a1911da18659 1379-1406,1408-1416
+  s_a4dbdee90224d0::t_6d4b615cdd76a1 41-44,46,48
+  s_a4dbdee90224d0::t_bf435830c7ee81 47,49
+  s_a4dbdee90224d0::t_7e0cc360dbc9dd 913-915,921-923
+  s_a4dbdee90224d0::t_c98f3ffa4a1173 905-912,916-920,924-925
+  s_a4dbdee90224d0::t_c997a8bef8e0ec 1355
+  s_a4dbdee90224d0::t_25854ce3873dd8 45
+  s_a4dbdee90224d0::t_0de199fd1bea7d 1407
+  s_a4dbdee90224d0::t_5701222cd39152 2157-2174
+  s_a4dbdee90224d0::t_cd81c0eefb310d 1341-1354,1356-1371
+  s_a4dbdee90224d0::t_ae7e04a353063b 2175-2207
+tests/sim_wiki_comparison.py
+  s_a4dbdee90224d0::t_418945a9b7e131 22
+  s_a4dbdee90224d0::t_244be68dc6f5ec 229-230,234-235,246-247,254-256,259,276-311
+  s_a4dbdee90224d0::t_825a45c4436819 1-21,23-228,231-233,236-245,248-253,257-258,260-275,312-336,338-357,359,395-457,459-466,472,476-479,481,488,492-493,495-496,500,504,514-515,519-520,535-539,544-546,552,556,559-562,564-568
+  s_a4dbdee90224d0::t_33f2cc516d31dc 458,467-471,473-475,480,482-487,489-491,494,497-499,501-503,505-513,516-518,521-534,540-543,547-551,553-555,557-558,563
+  s_a4dbdee90224d0::t_0e02e3a6624ee6 358,360-394
+  s_a4dbdee90224d0::t_f02eb7d18174f4 337
+skillopt/optimizer/wiki_maintainer.py
+  s_a4dbdee90224d0::t_abbd702ac81f41 265-269,280,286-288
+  s_a4dbdee90224d0::t_58fe2ca99e8331 337-339
+  s_a4dbdee90224d0::t_51ad35b7f6e727 109,113-114
+  s_a4dbdee90224d0::t_5da63bdadef175 167-246
+  s_a4dbdee90224d0::t_5cb2646f2e978d 422-424
+  s_a4dbdee90224d0::t_5c1848ff228490 466-508
+  s_a4dbdee90224d0::t_88d09d8a8509d1 1-103,110-112,115-166,247-264,270-279,281-285,289-303,305-336,340-421,425-465,509-583
+  s_a4dbdee90224d0::t_3247b4bc31312b 104-108
+  s_a4dbdee90224d0::t_c4afc1d50cd4ff 304
+skillopt/gradient/reflect.py
+  s_a4dbdee90224d0::t_0e584b941cc96c 515
+  s_a4dbdee90224d0::t_b2fd8e2ebc4280 278
+  s_a4dbdee90224d0::t_3432143ad51b98 398
+  s_a4dbdee90224d0::t_a75ba365526d31 452-453
+  s_a4dbdee90224d0::t_f6d352fa19287f 351-352
+  s_a4dbdee90224d0::t_91c3a9515776a7 616,631
+docs2/creation/WikiSkill.md
+  s_a4dbdee90224d0::t_dabd08611c1cd2 1-533
+web/app.py
+  s_a4dbdee90224d0::t_430d384cbfc96e 1122-1123,1129
+  s_a4dbdee90224d0::t_68ccb54563179a 1153-1154
+  s_a4dbdee90224d0::t_3b45c3e131662c 735-775
+  s_a4dbdee90224d0::t_2836d65ce7f967 776-778
+web/static/index.html
+  s_a4dbdee90224d0::t_a154e98717f95d 1247,1256
+  s_a4dbdee90224d0::t_b503d864b82c8a 734
+  s_a4dbdee90224d0::t_a3b8bc0fdf311f 1391-1392
+  s_a4dbdee90224d0::t_fc2c69374715ba 537,546-549
+  s_a4dbdee90224d0::t_96cad0c86662a3 1593
+  s_a4dbdee90224d0::t_bb416eaa339e14 1272-1279
+  s_a4dbdee90224d0::t_ec3475aefda4d0 504-531
+  s_a4dbdee90224d0::t_f13d2db8d02c6a 1360,1362-1365
+  s_a4dbdee90224d0::t_39af2e4fcd4436 1222-1231
+skillopt/prompts/wiki_maintainer.md
+  s_a4dbdee90224d0::t_95febaf8176956 1-61
+skillopt/optimizer/react_proposer.py
+  s_a4dbdee90224d0::t_46bd819d6e282b 1-294
+docs2/creation/wiki_dataflow.html
+  s_a4dbdee90224d0::t_0766c861809256 2,4-95,98-396,398-401
+  s_a4dbdee90224d0::t_d8d7177bd00355 1,3,96-97,397,402-403
+skillopt/config.py
+  s_a4dbdee90224d0::t_f5d05d130c4db5 178-186
+skillopt/envs/base.py
+  s_a4dbdee90224d0::t_d569c2d9c71ed0 271
+docs2/creation/wiki_vs_baseline.html
+  s_a4dbdee90224d0::t_064c8cb7a3efd2 1-196
+configs/searchqa/default.yaml
+  h_4d4cc0d7ef2df6 5-6,9
+skillopt/prompts/react_proposer.md
+  s_a4dbdee90224d0::t_88aeaae7f35aee 1-60
+tests/test_wiki_maintainer.py
+  s_a4dbdee90224d0::t_ed643b832e424c 522,524-525
+  s_a4dbdee90224d0::t_0d38b051e9bd37 728-731
+  s_a4dbdee90224d0::t_5aa4243a3eb1d3 221-235
+  s_a4dbdee90224d0::t_bc7e89298c8e1c 29
+  s_a4dbdee90224d0::t_398eba04d51075 1-28,30,32-36,38-174,176,179-220,236-290,292-445,447-451,464,466,468-509,711-727,732-740
+  s_a4dbdee90224d0::t_6e775d5a113bd5 31,37
+  s_a4dbdee90224d0::t_4383f78fd0036e 446,452-463,465,467
+  s_a4dbdee90224d0::t_2dd6b94137e730 175,177-178
+  s_a4dbdee90224d0::t_066dee8b91823f 291
+  s_a4dbdee90224d0::t_c23e346b4508cd 510-521,523,526-710
+tests/sim_wiki_results.json
+  s_a4dbdee90224d0::t_c09487425e1f0a 2-97,100-101,198-199,202-205,213-221,229-232,234-237,245-248,250-253,261-264,266-269,278-280,282-285,289-297,301-303
+  s_a4dbdee90224d0::t_0e5ec203e26022 1,98-99,102-197,200-201,206-212,222-228,233,238-244,249,254-260,265,270-277,281,286-288,298-300,304-306
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.2",
+  "base_commit_sha": "62655f43be5be697fc46efb6e857e645f0e469bc",
+  "prompts": {},
+  "humans": {
+    "h_4d4cc0d7ef2df6": {
+      "author": "lihaitao <1761864532@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_a4dbdee90224d0": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a96d86b6d00dde8617432df",
+        "model": "GLM-5.3"
+      },
+      "human_author": "lihaitao <1761864532@qq.com>",
+      "custom_attributes": {
+        "external_session_id": "6a96d86b6d00dde8617432df",
+        "edit_kind": "bash",
+        "session_id": "6a96d86b6d00dde8617432df",
+        "tool_use_id": "6a9831016d00dde8617438b6",
+        "tool_name": "RunCommand",
+        "display_model_name": "GLM-5.3-5000w",
+        "operation_id": "6a9831016d00dde8617438b6"
+      }
+    }
+  }
+}
