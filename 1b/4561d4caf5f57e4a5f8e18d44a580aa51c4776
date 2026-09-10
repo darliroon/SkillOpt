@@ -1,0 +1,109 @@
+docs/Skills/officeqa/gepa_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-151
+docs/Skills/alfworld/llm_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-173
+docs/Skills/searchqa/ours_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-57
+docs/Skills/docvqa/human_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-89
+docs/Skills/docvqa/textgrad_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-68
+docs/Skills/searchqa/gepa_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-72
+docs/Skills/alfworld/textgrad_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-214
+docs/Skills/docvqa/llm_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-69
+docs/Skills/spreadsheetbench/textgrad_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-195
+docs2/creation/ret.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-165
+docs/Skills/searchqa/llm_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-115
+docs/Skills/docvqa/gepa_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-104
+docs/Skills/searchqa/skillopt_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-62
+docs/Skills/spreadsheetbench/ours_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-200
+docs/Skills/officeqa/trace2skill_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-156
+docs/Skills/spreadsheetbench/skillopt_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-133
+docs/Skills/officeqa/skillopt_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-50
+docs/Skills/spreadsheetbench/human_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-241
+docs/Skills/docvqa/ours_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-78
+docs/Skills/officeqa/textgrad_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-104
+docs/Skills/officeqa/human_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-140
+docs/Skills/spreadsheetbench/llm_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-158
+docs/Skills/README.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-73
+docs/Skills/searchqa/trace2skill_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-245
+docs/Skills/alfworld/human_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-157
+docs/Skills/alfworld/trace2skill_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-290
+docs/Skills/searchqa/textgrad_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-151
+docs/Skills/spreadsheetbench/trace2skill_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-296
+docs/Skills/alfworld/ours_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-205
+docs/Skills/alfworld/skillopt_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-113
+docs/Skills/searchqa/human_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-118
+docs/Skills/officeqa/llm_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-84
+docs/Skills/alfworld/gepa_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-317
+docs/Skills/docvqa/skillopt_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-32
+docs/Skills/spreadsheetbench/gepa_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-290
+docs2/creation/agent_trace_dataset_requirements.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-125
+docs2/ppt_text_ablation.html
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-932
+docs/Skills/officeqa/ours_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-96
+docs/Skills/docvqa/trace2skill_skill.md
+  s_f9215cc85e9b22::t_8b0eef8482b3ea 1-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.2",
+  "base_commit_sha": "1b4561d4caf5f57e4a5f8e18d44a580aa51c4776",
+  "prompts": {},
+  "humans": {
+    "h_4d4cc0d7ef2df6": {
+      "author": "lihaitao <1761864532@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_f9215cc85e9b22": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6aa26ee07889c232d0aee3fc",
+        "model": "DeepSeek-V4-Pro"
+      },
+      "human_author": "lihaitao <1761864532@qq.com>",
+      "custom_attributes": {
+        "tool_name": "RunCommand",
+        "operation_id": "6aa26fc67889c232d0aee43d",
+        "display_model_name": "DeepSeek-V4-Pro-5000w",
+        "session_id": "6aa26ee07889c232d0aee3fc",
+        "edit_kind": "bash",
+        "tool_use_id": "6aa26fc67889c232d0aee43d",
+        "external_session_id": "6aa26ee07889c232d0aee3fc"
+      }
+    }
+  }
+}
