@@ -49,6 +49,11 @@ CODEX_EXEC_USE_SDK = os.environ.get("CODEX_EXEC_USE_SDK", "auto")
 CODEX_EXEC_NETWORK_ACCESS = _parse_bool(os.environ.get("CODEX_EXEC_NETWORK_ACCESS"), False)
 CODEX_EXEC_WEB_SEARCH = _parse_bool(os.environ.get("CODEX_EXEC_WEB_SEARCH"), False)
 CODEX_EXEC_APPROVAL_POLICY = os.environ.get("CODEX_EXEC_APPROVAL_POLICY", "never")
+# Provider URL and API key for Codex exec, derived from the target backend
+# config (target_openai_compatible_base_url / target_openai_compatible_api_key).
+# Set by configure_codex_exec_from_config(); read by build_codex_exec_cli_config_overrides().
+CODEX_EXEC_TARGET_BASE_URL = ""
+CODEX_EXEC_TARGET_API_KEY = ""
 CLAUDE_CODE_EXEC_PATH = os.environ.get("CLAUDE_CODE_EXEC_PATH", "claude")
 CLAUDE_CODE_EXEC_PROFILE = os.environ.get("CLAUDE_CODE_EXEC_PROFILE", "")
 CLAUDE_CODE_EXEC_USE_SDK = os.environ.get("CLAUDE_CODE_EXEC_USE_SDK", "auto")
@@ -86,6 +91,8 @@ _CODEX_EXEC_BASELINE = {
     "network_access": CODEX_EXEC_NETWORK_ACCESS,
     "web_search": CODEX_EXEC_WEB_SEARCH,
     "approval_policy": CODEX_EXEC_APPROVAL_POLICY,
+    "target_base_url": CODEX_EXEC_TARGET_BASE_URL,
+    "target_api_key": CODEX_EXEC_TARGET_API_KEY,
 }
 _CODEX_EXEC_MUTATED_ENV_KEYS = (
     "CODEX_EXEC_PATH",
@@ -98,6 +105,7 @@ _CODEX_EXEC_MUTATED_ENV_KEYS = (
     "CODEX_EXEC_NETWORK_ACCESS",
     "CODEX_EXEC_WEB_SEARCH",
     "CODEX_EXEC_APPROVAL_POLICY",
+    "SKILLOPT_CODEX_API_KEY",
 )
 _CODEX_EXEC_ENV_BASELINE = {
     key: os.environ[key]
@@ -266,7 +274,7 @@ def _first_nonempty(config: Mapping[str, Any], *keys: str) -> Any:
 
 def _restore_codex_exec_baseline() -> None:
     """Restore process-start globals and the exact environment-key state."""
-    global CODEX_EXEC_PATH, CODEX_EXEC_SANDBOX, CODEX_EXEC_PROFILE, CODEX_EXEC_REASONING_EFFORT, CODEX_EXEC_USE_SDK, CODEX_EXEC_NETWORK_ACCESS, CODEX_EXEC_WEB_SEARCH, CODEX_EXEC_APPROVAL_POLICY
+    global CODEX_EXEC_PATH, CODEX_EXEC_SANDBOX, CODEX_EXEC_PROFILE, CODEX_EXEC_REASONING_EFFORT, CODEX_EXEC_USE_SDK, CODEX_EXEC_NETWORK_ACCESS, CODEX_EXEC_WEB_SEARCH, CODEX_EXEC_APPROVAL_POLICY, CODEX_EXEC_TARGET_BASE_URL, CODEX_EXEC_TARGET_API_KEY
     CODEX_EXEC_PATH = _CODEX_EXEC_BASELINE["path"]
     CODEX_EXEC_SANDBOX = _CODEX_EXEC_BASELINE["sandbox"]
     CODEX_EXEC_PROFILE = _CODEX_EXEC_BASELINE["profile"]
@@ -275,6 +283,8 @@ def _restore_codex_exec_baseline() -> None:
     CODEX_EXEC_NETWORK_ACCESS = _CODEX_EXEC_BASELINE["network_access"]
     CODEX_EXEC_WEB_SEARCH = _CODEX_EXEC_BASELINE["web_search"]
     CODEX_EXEC_APPROVAL_POLICY = _CODEX_EXEC_BASELINE["approval_policy"]
+    CODEX_EXEC_TARGET_BASE_URL = _CODEX_EXEC_BASELINE["target_base_url"]
+    CODEX_EXEC_TARGET_API_KEY = _CODEX_EXEC_BASELINE["target_api_key"]
     for key in _CODEX_EXEC_MUTATED_ENV_KEYS:
         if key in _CODEX_EXEC_ENV_BASELINE:
             os.environ[key] = _CODEX_EXEC_ENV_BASELINE[key]
@@ -287,6 +297,11 @@ def configure_codex_exec_from_config(config: Mapping[str, Any]) -> None:
 
     Dedicated ``codex_exec_*`` keys take precedence over legacy aliases.  The
     ordering is centralized here so training and eval-only cannot drift.
+
+    Additionally reads ``target_openai_compatible_base_url`` and
+    ``target_openai_compatible_api_key`` (with fallback to the non-target
+    variants) so that Codex exec can use the same endpoint as the target
+    chat backend without a separate ``~/.codex/config.toml``.
     """
     _restore_codex_exec_baseline()
     configure_codex_exec(
@@ -312,6 +327,27 @@ def configure_codex_exec_from_config(config: Mapping[str, Any]) -> None:
         approval_policy=_first_nonempty(config, "codex_exec_approval_policy"),
     )
 
+    # Propagate the target backend's URL and API key to Codex exec.
+    global CODEX_EXEC_TARGET_BASE_URL, CODEX_EXEC_TARGET_API_KEY
+    base_url = _first_nonempty(
+        config,
+        "target_openai_compatible_base_url",
+        "openai_compatible_base_url",
+    )
+    api_key_raw = _first_nonempty(
+        config,
+        "target_openai_compatible_api_key",
+        "openai_compatible_api_key",
+    )
+    if base_url:
+        CODEX_EXEC_TARGET_BASE_URL = str(base_url).rstrip("/")
+    if api_key_raw:
+        # Codex CLI does not support multi-key rotation; use the first key.
+        first_key = str(api_key_raw).split(",")[0].strip()
+        if first_key:
+            CODEX_EXEC_TARGET_API_KEY = first_key
+            os.environ["SKILLOPT_CODEX_API_KEY"] = first_key
+
 
 def get_codex_exec_config() -> dict[str, str | bool | int]:
     return {
@@ -325,13 +361,21 @@ def get_codex_exec_config() -> dict[str, str | bool | int]:
         "web_search": CODEX_EXEC_WEB_SEARCH,
         "approval_policy": CODEX_EXEC_APPROVAL_POLICY,
         "empty_response_retries": EXEC_EMPTY_RESPONSE_RETRIES,
+        "target_base_url": CODEX_EXEC_TARGET_BASE_URL,
     }
 
 
 def build_codex_exec_cli_config_overrides(
     config: Mapping[str, Any] | None = None,
 ) -> list[str]:
-    """Translate shared network/search settings to Codex CLI overrides."""
+    """Translate shared network/search settings to Codex CLI overrides.
+
+    When a target base URL is configured (via
+    ``target_openai_compatible_base_url`` in the YAML config), also emits
+    ``model_provider`` and ``model_providers.skillopt`` overrides so that
+    Codex exec uses the same endpoint as the target chat backend, without
+    requiring a separate ``~/.codex/config.toml``.
+    """
     effective = get_codex_exec_config() if config is None else config
     network_enabled = _coerce_bool_setting(
         effective.get("network_access", False),
@@ -343,10 +387,23 @@ def build_codex_exec_cli_config_overrides(
     )
     network_access = "true" if network_enabled else "false"
     web_search = "live" if search_enabled else "disabled"
-    return [
+    overrides = [
         f"sandbox_workspace_write.network_access={network_access}",
         f"web_search={json.dumps(web_search)}",
     ]
+
+    base_url = effective.get("target_base_url", "")
+    if base_url:
+        overrides.append('model_provider="skillopt"')
+        provider = (
+            '{name="SkillOpt",'
+            f'base_url="{base_url}",'
+            'env_key="SKILLOPT_CODEX_API_KEY",'
+            'wire_api="responses"}'
+        )
+        overrides.append(f"model_providers.skillopt={provider}")
+
+    return overrides
 
 
 def configure_claude_code_exec(

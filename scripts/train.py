@@ -100,6 +100,11 @@ def _register_builtins() -> None:
         _ENV_REGISTRY["swebench"] = SWEBenchAdapter
     except ImportError:
         pass
+    try:
+        from skillopt.envs.gbrain.adapter import GbrainAdapter
+        _ENV_REGISTRY["gbrain"] = GbrainAdapter
+    except ImportError:
+        pass
 
 
 def get_adapter(cfg: dict):
