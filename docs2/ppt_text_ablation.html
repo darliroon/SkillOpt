@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文本消融算子 — Skill 自迭代精化</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0a0e1a;
+    color: #e8ecf4;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Background ── */
+  .bg-grid {
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .bg-glow {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 800px 600px at 20% 30%, rgba(99,102,241,0.08), transparent),
+      radial-gradient(ellipse 600px 400px at 80% 70%, rgba(236,72,153,0.06), transparent),
+      radial-gradient(ellipse 500px 500px at 50% 50%, rgba(16,185,129,0.04), transparent);
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 32px;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header .badge {
+    display: inline-block;
+    padding: 6px 20px;
+    background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2));
+    border: 1px solid rgba(99,102,241,0.3);
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #a5b4fc;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .header h1 {
+    font-size: 42px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #e8ecf4 0%, #a5b4fc 50%, #f9a8d4 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.3;
+    margin-bottom: 12px;
+  }
+  .header .subtitle {
+    font-size: 16px;
+    color: #8892a8;
+    font-weight: 300;
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* ── Main flow area ── */
+  .flow-area {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: center;
+  }
+
+  /* ── Skill Document (central subject) ── */
+  .skill-doc-wrapper {
+    position: relative;
+    display: flex;
+    gap: 48px;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+
+  .skill-doc {
+    background: linear-gradient(145deg, #141828, #1a1f35);
+    border: 1px solid rgba(99,102,241,0.2);
+    border-radius: 16px;
+    padding: 0;
+    width: 380px;
+    box-shadow:
+      0 0 40px rgba(99,102,241,0.08),
+      0 20px 60px rgba(0,0,0,0.4);
+    overflow: hidden;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+  .skill-doc::before {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: 16px;
+    padding: 1px;
+    background: linear-gradient(145deg, rgba(99,102,241,0.3), transparent, rgba(236,72,153,0.15));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .doc-header {
+    background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1));
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(99,102,241,0.15);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .doc-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .doc-title {
+    font-size: 14px; font-weight: 700; color: #c7d2fe;
+  }
+  .doc-subtitle {
+    font-size: 11px; color: #8892a8; font-weight: 300;
+  }
+  .doc-body {
+    padding: 16px 20px;
+    min-height: 340px;
+  }
+
+  /* Skill sections */
+  .skill-section {
+    margin-bottom: 12px;
+    border-radius: 8px;
+    padding: 10px 14px;
+    border-left: 3px solid;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .skill-section .sec-header {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .skill-section .sec-body {
+    font-size: 11px;
+    line-height: 1.5;
+    color: #9ca8c0;
+    font-weight: 300;
+  }
+  .skill-section .utility-badge {
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 100px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  /* Section states */
+  .sec-protected {
+    border-color: #f59e0b;
+    background: rgba(245,158,11,0.06);
+  }
+  .sec-protected .sec-header { color: #fbbf24; }
+  .sec-protected .lock-icon { font-size: 10px; margin-left: 4px; }
+
+  .sec-valuable {
+    border-color: #10b981;
+    background: rgba(16,185,129,0.06);
+  }
+  .sec-valuable .sec-header { color: #6ee7b7; }
+
+  .sec-marginal {
+    border-color: #f59e0b;
+    background: rgba(245,158,11,0.06);
+  }
+  .sec-marginal .sec-header { color: #fcd34d; }
+
+  .sec-removable {
+    border-color: #ef4444;
+    background: rgba(239,68,68,0.06);
+  }
+  .sec-removable .sec-header { color: #fca5a5; }
+
+  /* Animation states */
+  .skill-section.auditing {
+    animation: auditPulse 1.2s ease-in-out;
+    box-shadow: 0 0 20px rgba(99,102,241,0.3);
+    border-color: #6366f1 !important;
+    background: rgba(99,102,241,0.1) !important;
+  }
+  @keyframes auditPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+  }
+  .skill-section.removing {
+    animation: sectionFade 0.8s ease-out forwards;
+  }
+  @keyframes sectionFade {
+    0% { opacity: 1; max-height: 100px; margin-bottom: 12px; padding: 10px 14px; }
+    100% { opacity: 0; max-height: 0; margin-bottom: 0; padding: 0 14px; transform: translateX(20px); }
+  }
+  .skill-section.keeping {
+    animation: keepGlow 1s ease-out;
+  }
+  @keyframes keepGlow {
+    0% { box-shadow: 0 0 0 rgba(16,185,129,0); }
+    50% { box-shadow: 0 0 20px rgba(16,185,129,0.3); }
+    100% { box-shadow: 0 0 0 rgba(16,185,129,0); }
+  }
+  .skill-section.show-utility .utility-badge {
+    opacity: 1;
+  }
+
+  .utility-keep { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+  .utility-marginal { background: rgba(245,158,11,0.2); color: #fcd34d; }
+  .utility-remove { background: rgba(239,68,68,0.2); color: #fca5a5; }
+
+  /* ── Process steps column ── */
+  .process-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 340px;
+  }
+
+  .process-step {
+    background: linear-gradient(145deg, #141828, #1a1f35);
+    border: 1px solid rgba(99,102,241,0.12);
+    border-radius: 12px;
+    padding: 16px 18px;
+    position: relative;
+    opacity: 0.4;
+    transform: translateX(-10px);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .process-step.active {
+    opacity: 1;
+    transform: translateX(0);
+    border-color: rgba(99,102,241,0.35);
+    box-shadow: 0 0 24px rgba(99,102,241,0.1);
+  }
+  .process-step.done {
+    opacity: 0.7;
+    border-color: rgba(16,185,129,0.25);
+  }
+
+  .step-number {
+    position: absolute;
+    top: -10px; left: 16px;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    background: #1e2440;
+    border: 2px solid rgba(99,102,241,0.3);
+    color: #8892a8;
+    transition: all 0.3s;
+  }
+  .process-step.active .step-number {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-color: #818cf8;
+    color: #fff;
+  }
+  .process-step.done .step-number {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-color: #34d399;
+    color: #fff;
+  }
+
+  .step-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #c7d2fe;
+  }
+  .process-step.active .step-title { color: #e0e7ff; }
+  .process-step.done .step-title { color: #a7f3d0; }
+
+  .step-desc {
+    font-size: 11px;
+    color: #6b7594;
+    line-height: 1.6;
+    font-weight: 300;
+  }
+  .process-step.active .step-desc { color: #9ca8c0; }
+
+  .step-icon {
+    float: right;
+    font-size: 22px;
+    margin-left: 8px;
+    opacity: 0.3;
+    transition: opacity 0.3s;
+  }
+  .process-step.active .step-icon { opacity: 0.8; }
+
+  /* ── Arrow connectors ── */
+  .arrow-down {
+    text-align: center;
+    color: #4f5a7a;
+    font-size: 20px;
+    margin: 4px 0;
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  .arrow-down.visible { opacity: 1; }
+  .arrow-down .arr-line {
+    display: inline-block;
+    animation: arrowFlow 1.5s ease-in-out infinite;
+  }
+  @keyframes arrowFlow {
+    0%, 100% { transform: translateY(0); opacity: 0.4; }
+    50% { transform: translateY(3px); opacity: 1; }
+  }
+
+  /* ── Metrics / Score panel ── */
+  .metrics-panel {
+    background: linear-gradient(145deg, #141828, #1a1f35);
+    border: 1px solid rgba(99,102,241,0.12);
+    border-radius: 12px;
+    padding: 16px 20px;
+    width: 280px;
+  }
+  .metrics-title {
+    font-size: 12px; font-weight: 700; color: #8892a8;
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 14px;
+  }
+  .metric-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .metric-label {
+    font-size: 12px; color: #9ca8c0;
+  }
+  .metric-bar-bg {
+    width: 100px; height: 6px;
+    background: rgba(99,102,241,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0 10px;
+  }
+  .metric-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1), background 0.5s;
+    width: 0%;
+  }
+  .metric-value {
+    font-size: 12px; font-weight: 700;
+    min-width: 36px; text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Triple gate */
+  .gate-indicators {
+    display: flex; gap: 8px; margin-top: 14px;
+  }
+  .gate-chip {
+    flex: 1;
+    padding: 8px 6px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    border: 1px solid rgba(99,102,241,0.15);
+    background: rgba(30,36,64,0.5);
+    color: #6b7594;
+    transition: all 0.4s;
+  }
+  .gate-chip.pass {
+    border-color: rgba(16,185,129,0.4);
+    background: rgba(16,185,129,0.1);
+    color: #6ee7b7;
+  }
+  .gate-chip.fail {
+    border-color: rgba(239,68,68,0.4);
+    background: rgba(239,68,68,0.1);
+    color: #fca5a5;
+  }
+
+  /* ── Iteration loop indicator ── */
+  .loop-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(236,72,153,0.1));
+    border: 1px solid rgba(139,92,246,0.3);
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #c4b5fd;
+    margin: 16px 0;
+    opacity: 0;
+    transform: scale(0.9);
+    transition: all 0.5s;
+  }
+  .loop-badge.visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .loop-badge .loop-icon {
+    animation: loopSpin 2s linear infinite;
+    font-size: 16px;
+  }
+  @keyframes loopSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* ── Final result ── */
+  .final-result {
+    text-align: center;
+    margin-top: 32px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .final-result.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .final-label {
+    font-size: 12px;
+    color: #6ee7b7;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .final-stats {
+    display: flex;
+    justify-content: center;
+    gap: 48px;
+  }
+  .final-stat {
+    text-align: center;
+  }
+  .final-stat .stat-value {
+    font-size: 36px;
+    font-weight: 900;
+  }
+  .final-stat .stat-value.green { color: #6ee7b7; }
+  .final-stat .stat-value.blue { color: #818cf8; }
+  .final-stat .stat-value.pink { color: #f9a8d4; }
+  .final-stat .stat-label {
+    font-size: 12px;
+    color: #6b7594;
+    margin-top: 4px;
+  }
+
+  /* ── Floating particles / data flow ── */
+  .particle-container {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: 16px;
+  }
+  .particle {
+    position: absolute;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: #6366f1;
+    opacity: 0;
+  }
+
+  /* ── Phase label ── */
+  .phase-indicator {
+    text-align: center;
+    margin-bottom: 24px;
+    min-height: 30px;
+  }
+  .phase-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: #818cf8;
+    opacity: 0;
+    transition: all 0.5s;
+  }
+  .phase-text.visible {
+    opacity: 1;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 1100px) {
+    .skill-doc-wrapper { flex-direction: column; align-items: center; }
+    .process-column { width: 380px; }
+    .metrics-panel { width: 380px; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<div class="container">
+  <div class="header">
+    <div class="badge">SkillProx · Text Ablation Operator</div>
+    <h1>文本消融算子</h1>
+    <p class="subtitle">Skill 文本作为主体，通过"留一法消融 → 效用审计 → 精简收缩 → 三重门控"实现自迭代精化，在守住性能底线的前提下去除冗余</p>
+  </div>
+
+  <div class="phase-indicator">
+    <div class="phase-text" id="phaseText"></div>
+  </div>
+
+  <div class="flow-area">
+    <!-- Main row: process steps | skill doc | metrics -->
+    <div class="skill-doc-wrapper">
+      <!-- Left: Process steps -->
+      <div class="process-column" id="processColumn">
+        <div class="process-step" id="step1">
+          <span class="step-number">1</span>
+          <span class="step-icon">📏</span>
+          <div class="step-title">基线测量</div>
+          <div class="step-desc">在验证集上评估当前 Skill，锁定性能底线与原始字符数</div>
+        </div>
+        <div class="arrow-down" id="arr1"><span class="arr-line">↓</span></div>
+
+        <div class="process-step" id="step2">
+          <span class="step-number">2</span>
+          <span class="step-icon">✂️</span>
+          <div class="step-title">结构分解</div>
+          <div class="step-desc">按 ## 章节切分为独立单元，保护层不参与收缩</div>
+        </div>
+        <div class="arrow-down" id="arr2"><span class="arr-line">↓</span></div>
+
+        <div class="process-step" id="step3">
+          <span class="step-number">3</span>
+          <span class="step-icon">🔬</span>
+          <div class="step-title">LOO 消融审计</div>
+          <div class="step-desc">逐个移除单元重跑评估，计算每个单元的效用值</div>
+        </div>
+        <div class="arrow-down" id="arr3"><span class="arr-line">↓</span></div>
+
+        <div class="process-step" id="step4">
+          <span class="step-number">4</span>
+          <span class="step-icon">🤖</span>
+          <div class="step-title">LLM 收缩提议</div>
+          <div class="step-desc">Optimizer 依据效用表，生成更紧凑的候选 Skill</div>
+        </div>
+        <div class="arrow-down" id="arr4"><span class="arr-line">↓</span></div>
+
+        <div class="process-step" id="step5">
+          <span class="step-number">5</span>
+          <span class="step-icon">🚦</span>
+          <div class="step-title">三重门控</div>
+          <div class="step-desc">结构完整 + 压缩率上限 + 性能不低于基线</div>
+        </div>
+        <div class="arrow-down" id="arr5"><span class="arr-line">↓</span></div>
+
+        <div class="process-step" id="step6">
+          <span class="step-number">6</span>
+          <span class="step-icon">🔄</span>
+          <div class="step-title">链式迭代</div>
+          <div class="step-desc">通过则继续下一轮收缩，首次失败即终止</div>
+        </div>
+      </div>
+
+      <!-- Center: Skill Document -->
+      <div class="skill-doc" id="skillDoc">
+        <div class="doc-header">
+          <div class="doc-icon">📄</div>
+          <div>
+            <div class="doc-title" id="docTitle">best_skill.md</div>
+            <div class="doc-subtitle" id="docSubtitle">待精化的 Skill 文档</div>
+          </div>
+        </div>
+        <div class="doc-body" id="docBody">
+          <div class="skill-section sec-protected" data-section="0">
+            <div class="sec-header">
+              <span><!-- SLOW_UPDATE --> 长期指导 <span class="lock-icon">🔒</span></span>
+            </div>
+            <div class="sec-body">受保护区，收缩过程中不可修改……</div>
+          </div>
+          <div class="skill-section" data-section="1" data-utility="high">
+            <div class="sec-header">
+              <span>## 核心解题规则</span>
+              <span class="utility-badge utility-keep">高价值 ✓</span>
+            </div>
+            <div class="sec-body">先分析问题类型，提取关键实体，再按步骤推理；必须给出最终答案标签。</div>
+          </div>
+          <div class="skill-section" data-section="2" data-utility="negative">
+            <div class="sec-header">
+              <span>## 通用提示</span>
+              <span class="utility-badge utility-remove">负效用 ✗</span>
+            </div>
+            <div class="sec-body">请仔细阅读题目，认真思考后作答。注意答案格式要正确。保持回答清晰有条理，不要遗漏重要信息。请务必仔细检查你的回答。</div>
+          </div>
+          <div class="skill-section" data-section="3" data-utility="high">
+            <div class="sec-header">
+              <span>## 检索策略</span>
+              <span class="utility-badge utility-keep">高价值 ✓</span>
+            </div>
+            <div class="sec-body">先找实体匹配段落，再扩展上下文窗口；优先选择包含数字和专有名词的证据。</div>
+          </div>
+          <div class="skill-section" data-section="4" data-utility="marginal">
+            <div class="sec-header">
+              <span>## 格式说明</span>
+              <span class="utility-badge utility-marginal">边缘 ~</span>
+            </div>
+            <div class="sec-body">使用 answer 标签包裹答案，可以加粗关键词让答案更醒目便于阅读。</div>
+          </div>
+          <div class="skill-section" data-section="5" data-utility="negative">
+            <div class="sec-header">
+              <span>## 冗余示例</span>
+              <span class="utility-badge utility-remove">负效用 ✗</span>
+            </div>
+            <div class="sec-body">以下是一些示例供参考。示例一：当遇到类似问题时，可以尝试以下方法解决。示例二：另一种情况需要注意的要点如下所述。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Metrics -->
+      <div class="metrics-panel" id="metricsPanel">
+        <div class="metrics-title">验证集性能监控</div>
+        <div class="metric-row">
+          <span class="metric-label">Hard Score</span>
+          <div class="metric-bar-bg"><div class="metric-bar" id="barHard"></div></div>
+          <span class="metric-value" id="valHard">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Soft Score</span>
+          <div class="metric-bar-bg"><div class="metric-bar" id="barSoft"></div></div>
+          <span class="metric-value" id="valSoft">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">字符数</span>
+          <div class="metric-bar-bg"><div class="metric-bar" id="barChars" style="background: linear-gradient(90deg,#8b5cf6,#a78bfa);"></div></div>
+          <span class="metric-value" id="valChars">—</span>
+        </div>
+        <div class="gate-indicators" id="gates">
+          <div class="gate-chip" id="gate1">结构完整</div>
+          <div class="gate-chip" id="gate2">压缩≤10%</div>
+          <div class="gate-chip" id="gate3">性能守住</div>
+        </div>
+        <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(99,102,241,0.1);">
+          <div class="metric-row">
+            <span class="metric-label" style="color: #c4b5fd;">迭代轮次</span>
+            <span class="metric-value" id="valRound" style="color: #c4b5fd;">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loop badge -->
+    <div class="loop-badge" id="loopBadge">
+      <span class="loop-icon">↻</span>
+      <span id="loopText">候选通过，进入下一轮收缩...</span>
+    </div>
+
+    <!-- Final result -->
+    <div class="final-result" id="finalResult">
+      <div class="final-label">✦ 收缩完成 · 精化 Skill ✦</div>
+      <div class="final-stats">
+        <div class="final-stat">
+          <div class="stat-value green" id="finalPerf">+0%</div>
+          <div class="stat-label">性能保持</div>
+        </div>
+        <div class="final-stat">
+          <div class="stat-value blue" id="finalCompress">-0%</div>
+          <div class="stat-label">冗余精简</div>
+        </div>
+        <div class="final-stat">
+          <div class="stat-value pink" id="finalRounds">0轮</div>
+          <div class="stat-label">迭代收敛</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Animation controller ──
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const sections = document.querySelectorAll('.skill-section:not(.sec-protected)');
+const protectedSec = document.querySelector('.sec-protected');
+
+async function setPhase(text) {
+  const el = $('phaseText');
+  el.textContent = text;
+  el.classList.add('visible');
+}
+function clearPhase() {
+  $('phaseText').classList.remove('visible');
+}
+
+async function activateStep(n) {
+  for (let i = 1; i < n; i++) {
+    $('step'+i).classList.remove('active');
+    $('step'+i).classList.add('done');
+    $('arr'+i).classList.add('visible');
+  }
+  $('step'+n).classList.add('active');
+  if (n > 1) $('arr'+(n-1)).classList.add('visible');
+}
+
+function setMetric(hardVal, softVal, charsVal, charsPct) {
+  const bh = $('barHard'), bs = $('barSoft'), bc = $('barChars');
+  bh.style.width = (hardVal * 100) + '%';
+  bh.style.background = hardVal >= 0.6 ? 'linear-gradient(90deg,#10b981,#34d399)' : 'linear-gradient(90deg,#f59e0b,#fbbf24)';
+  bs.style.width = (softVal * 100) + '%';
+  bs.style.background = softVal >= 0.7 ? 'linear-gradient(90deg,#10b981,#34d399)' : 'linear-gradient(90deg,#f59e0b,#fbbf24)';
+  bc.style.width = charsPct + '%';
+  $('valHard').textContent = (hardVal * 100).toFixed(1) + '%';
+  $('valSoft').textContent = (softVal * 100).toFixed(1) + '%';
+  $('valChars').textContent = charsVal + ' chars';
+}
+
+function setGate(n, pass) {
+  const chip = $('gate'+n);
+  chip.classList.add(pass ? 'pass' : 'fail');
+  chip.textContent = pass ? chip.textContent + ' ✓' : chip.textContent + ' ✗';
+}
+function resetGates() {
+  for (let i = 1; i <= 3; i++) {
+    const chip = $('gate'+i);
+    chip.classList.remove('pass','fail');
+    const base = ['结构完整','压缩≤10%','性能守住'];
+    chip.textContent = base[i-1];
+  }
+}
+
+async function runAuditAnimation() {
+  // Animate each section being audited
+  const utils = {
+    1: { class: 'sec-valuable', delta: '+0.08', keep: true },
+    2: { class: 'sec-removable', delta: '-0.01', keep: false },
+    3: { class: 'sec-valuable', delta: '+0.12', keep: true },
+    4: { class: 'sec-marginal', delta: '+0.01', keep: 'tighten' },
+    5: { class: 'sec-removable', delta: '-0.02', keep: false },
+  };
+
+  for (const sec of sections) {
+    const id = sec.dataset.section;
+    sec.classList.add('auditing');
+    await sleep(600);
+    sec.classList.remove('auditing');
+    sec.classList.add(utils[id].class, 'show-utility');
+    await sleep(300);
+  }
+}
+
+async function runShrinkAnimation() {
+  // Remove negative sections
+  const toRemove = document.querySelectorAll('.sec-removable');
+  for (const sec of toRemove) {
+    sec.classList.add('removing');
+    await sleep(600);
+  }
+  // Tighten marginal
+  const marginal = document.querySelector('.sec-marginal .sec-body');
+  if (marginal) {
+    marginal.style.transition = 'all 0.5s';
+    marginal.style.opacity = '0';
+    await sleep(300);
+    marginal.textContent = '用 <answer> 标签包裹答案。';
+    marginal.style.opacity = '1';
+    marginal.closest('.skill-section').classList.remove('sec-marginal');
+    marginal.closest('.skill-section').classList.add('sec-valuable', 'keeping');
+    const badge = marginal.closest('.skill-section').querySelector('.utility-badge');
+    badge.className = 'utility-badge utility-keep';
+    badge.textContent = '已精简 ✓';
+  }
+  // Glow on kept sections
+  document.querySelectorAll('.sec-valuable:not(.sec-protected)').forEach(async (s, i) => {
+    await sleep(i * 150);
+    s.classList.add('keeping');
+  });
+}
+
+async function runRound(round, baselineHard, baselineSoft, baselineChars) {
+  const shrinkPct = round === 1 ? 0.08 : 0.05;
+  const newChars = Math.round(baselineChars * (1 - shrinkPct * round));
+  const charPct = 100 - shrinkPct * round * 100;
+  // Slight variation in score
+  const hardKeep = baselineHard + (round === 1 ? 0.005 : -0.003);
+  const softKeep = baselineSoft + (round === 1 ? 0.008 : -0.002);
+
+  // Step 1: Baseline
+  setPhase(`第 ${round} 轮收缩 — 测量基线性能`);
+  activateStep(1);
+  $('docTitle').textContent = round === 1 ? 'best_skill.md' : `shrunk_v${round-1}.md`;
+  $('docSubtitle').textContent = round === 1 ? '待精化的 Skill 文档' : `第 ${round-1} 轮收缩后的 Skill`;
+  if (round === 1) setMetric(baselineHard, baselineSoft, baselineChars, 100);
+  else setMetric(baselineHard + 0.005, baselineSoft + 0.008, Math.round(baselineChars * (1 - 0.08*(round-1))), 100 - 8*(round-1));
+  $('valRound').textContent = round;
+  await sleep(1200);
+
+  // Step 2: Decompose
+  setPhase('按章节切分 Skill 为独立单元');
+  activateStep(2);
+  // Highlight sections briefly
+  for (const sec of document.querySelectorAll('.skill-section')) {
+    sec.style.boxShadow = '0 0 12px rgba(99,102,241,0.2)';
+    await sleep(200);
+    sec.style.boxShadow = '';
+  }
+  await sleep(600);
+
+  // Step 3: LOO Audit
+  setPhase('逐单元消融审计，计算效用值');
+  activateStep(3);
+  await runAuditAnimation();
+  await sleep(800);
+
+  // Step 4: Shrink proposal
+  setPhase('Optimizer 依据效用表生成精简候选');
+  activateStep(4);
+  $('docTitle').textContent = `candidate_v${round}.md`;
+  $('docSubtitle').textContent = `第 ${round} 轮收缩候选`;
+  await runShrinkAnimation();
+  await sleep(800);
+
+  // Step 5: Triple gate
+  setPhase('三重门控验证');
+  activateStep(5);
+  resetGates();
+
+  // Gate 1: Structure
+  await sleep(400);
+  setGate(1, true);
+  await sleep(500);
+
+  // Gate 2: Compression
+  setGate(2, round <= 2);
+  await sleep(500);
+
+  // Gate 3: Performance
+  setMetric(hardKeep, softKeep, newChars, charPct);
+  await sleep(400);
+  const pass = hardKeep >= baselineHard - 0.01;
+  setGate(3, pass);
+  await sleep(800);
+
+  // Step 6: Chain iteration
+  activateStep(6);
+  clearPhase();
+
+  if (pass && round < 2) {
+    $('loopBadge').classList.add('visible');
+    $('loopText').textContent = `第 ${round} 轮通过，进入第 ${round+1} 轮收缩...`;
+    await sleep(1500);
+    $('loopBadge').classList.remove('visible');
+    // Reset some visual state for next round
+    document.querySelectorAll('.skill-section').forEach(s => {
+      s.classList.remove('show-utility', 'keeping');
+    });
+    // Re-add removable sections for animation (in real they'd be gone, but for demo reset)
+    return true;
+  } else {
+    $('loopBadge').classList.add('visible');
+    $('loopText').textContent = round >= 2 ? '压缩率达上限，收敛终止' : '性能跌破基线，回退终止';
+    await sleep(800);
+    $('loopBadge').classList.remove('visible');
+    return false;
+  }
+}
+
+async function main() {
+  await sleep(500);
+
+  // Reset doc to initial state for round 1
+  const baselineHard = 0.62;
+  const baselineSoft = 0.73;
+  const baselineChars = 1420;
+
+  // Round 1
+  await runRound(1, baselineHard, baselineSoft, baselineChars);
+  await sleep(500);
+
+  // For round 2, we need to visually restore sections (demo purposes)
+  // Actually let's just do one round cleanly and show final
+  // Re-render the doc in shrunk state
+  const docBody = $('docBody');
+  // The removed sections are already gone, marginal is tightened.
+  // Mark all steps done
+  for (let i = 1; i <= 6; i++) {
+    $('step'+i).classList.remove('active');
+    $('step'+i).classList.add('done');
+  }
+  for (let i = 1; i <= 5; i++) $('arr'+i).classList.add('visible');
+
+  $('docTitle').textContent = 'final_shrunk.md';
+  $('docSubtitle').textContent = '精化后的紧凑 Skill';
+
+  // Show final
+  setMetric(baselineHard + 0.005, baselineSoft + 0.008, Math.round(baselineChars * 0.89), 89);
+  $('valRound').textContent = '2 (收敛)';
+  resetGates();
+  setGate(1, true); setGate(2, true); setGate(3, true);
+
+  await sleep(500);
+  $('finalResult').classList.add('visible');
+  $('finalPerf').textContent = '+0.5%';
+  $('finalCompress').textContent = '-11%';
+  $('finalRounds').textContent = '2轮';
+}
+
+main();
+</script>
+</body>
+</html>
