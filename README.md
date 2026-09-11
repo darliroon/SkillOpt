@@ -26,8 +26,6 @@
 3. **进化记忆与抗遗忘算子**：从多版本技能、轨迹对比中蒸馏优化器新知识，注入并更新反思 Agent；同时通过 Markov 式邻代对比，提炼纵向指导写入技能文档。
 4. **GEPA（过程驱动反思）**：读取完整执行轨迹做步骤级因果分析，在 SkillOpt 训练（Phase 1）后、Prox Shrink（Phase 3）前运行。
 
-训练管线整体为：**Phase 1** SkillOpt 训练 → `base_skill.md`；**Phase 2** GEPA 优化 → `gepa_best_skill.md`；**Phase 3** Prox Shrink → `final_skill.md`；**Phase 4** 测试集评估 → valid/unseen 分数。
-
 ## 多执行端
 
 作为目标 Agent（target）可通过多种执行端运行：
