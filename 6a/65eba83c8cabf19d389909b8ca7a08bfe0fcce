@@ -1,0 +1,12 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.2",
+  "base_commit_sha": "6a65eba83c8cabf19d389909b8ca7a08bfe0fcce",
+  "prompts": {},
+  "humans": {
+    "h_4d4cc0d7ef2df6": {
+      "author": "lihaitao <1761864532@qq.com>"
+    }
+  }
+}
