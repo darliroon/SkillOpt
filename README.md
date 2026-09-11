@@ -32,7 +32,7 @@
 
 | 执行端             | 后端名                             | 说明                                                      |
 | --------------- | ------------------------------- | ------------------------------------------------------- |
-| **Jiuwen**      | `jiuwen_exec`                   |  |
+| **Jiuwen**      | `jiuwen_exec`                   | Jiuwen 执行端，支持Jiuwen-core-rust框架的执行端和Jiuwen Swarm |
 | **Codex**       | `codex_exec`                    | Codex CLI 执行端                                           |
 | **Claude Code** | `claude_code_exec`              | Claude Code CLI 执行端                                     |
 | Cursor          | `cursor_exec`                   | Cursor 执行端                                              |
