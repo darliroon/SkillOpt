@@ -1,0 +1,53 @@
+README.md
+  s_f9215cc85e9b22::t_99f56ab9e989d0 3,5,7,9,11-13,15,17-22,24-27,29,31,33,35-41,43,45-53,55,57,59,61,63-65,67-68,70-71,73-92,94,96-109,112,114-119,121-123,125,127-132,134-179
+configs/officeqa/default.yaml
+  h_4d4cc0d7ef2df6 5-6
+configs/livemathematicianbench/default.yaml
+  h_4d4cc0d7ef2df6 4-5
+configs/docvqa/default.yaml
+  h_4d4cc0d7ef2df6 5-6
+configs/_base_/default.yaml
+  h_4d4cc0d7ef2df6 10-11,14-16,18-19
+configs/spreadsheetbench/default.yaml
+  h_4d4cc0d7ef2df6 5-6
+configs/gbrain/default.yaml
+  h_4d4cc0d7ef2df6 5-6
+configs/searchqa/default.yaml
+  h_4d4cc0d7ef2df6 5-6
+configs/alfworld/default.yaml
+  h_4d4cc0d7ef2df6 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.2",
+  "base_commit_sha": "bf6bdb8e3be6842e11296f24fff1c0070fc9d621",
+  "prompts": {},
+  "humans": {
+    "h_4d4cc0d7ef2df6": {
+      "author": "lihaitao <1761864532@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_f9215cc85e9b22": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6aa26ee07889c232d0aee3fc",
+        "model": "DeepSeek-V4-Pro"
+      },
+      "human_author": "lihaitao <1761864532@qq.com>",
+      "custom_attributes": {
+        "operation_id": "6aa367b37889c232d0aee4ed",
+        "dedupe_key": "6aa26ee07889c232d0aee3fc:6aa367b37889c232d0aee4ed:afterEdit:887090b8",
+        "runtime_client": "trae-tob-git-ai",
+        "tool_use_id": "6aa367b37889c232d0aee4ed",
+        "external_session_id": "6aa26ee07889c232d0aee3fc",
+        "session_id": "6aa26ee07889c232d0aee3fc",
+        "edit_kind": "file_edit",
+        "tool_id": "icube:applyChatSnapshotPatch",
+        "source_scene": "agent",
+        "tool_type": "builtin",
+        "client_type": "ide"
+      }
+    }
+  }
+}
