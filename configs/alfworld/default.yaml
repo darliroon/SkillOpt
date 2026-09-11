@@ -1,7 +1,7 @@
 _base_: ../_base_/default.yaml
 
 model:
-  optimizer: gpt-5.6-sol
+  optimizer: gpt-5.5
   target: gpt-5.5
 
 train:

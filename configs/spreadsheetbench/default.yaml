@@ -2,8 +2,8 @@ _base_: ../_base_/default.yaml
 
 model:
   reasoning_effort: medium
-  optimizer: GLM-5.2,GLM-5.1,GLM-5,Qwen3.7-Plus
-  target: GLM-5.2,GLM-5.1,GLM-5,Qwen3.7-Plus
+  optimizer: gpt-5.5
+  target: gpt-5.5
 
 train:
   train_size: 80
